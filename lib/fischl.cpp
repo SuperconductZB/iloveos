@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
-void fischl::init(){
+int fischl::init(){
     printf("Hello Fischl!");
+    return 3;
 }

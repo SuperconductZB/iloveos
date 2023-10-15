@@ -11,9 +11,10 @@ include_directories(
 add_executable(fischl
 
   # Header files
-
-  include/fischl.h
   lib/fischl.cpp
   lib/main.cpp
 
 )
+
+enable_testing()
+add_subdirectory(test)

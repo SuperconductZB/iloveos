@@ -2,6 +2,6 @@ class fischl{
 
     // declare
     public:
-         void init();
+         int init();
 
 };
