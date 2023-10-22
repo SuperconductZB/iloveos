@@ -1,10 +1,1 @@
-Makefile
-/CMakeFiles
-CMakeCache.txt
-cmake_install.cmake
-fischl
-/test/CMakeFiles
-/test/cmake_install.cmake
-/test/CMakeCache.txt
-/test/Makefile
-run_tests
+build/*
