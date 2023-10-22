@@ -21,5 +21,5 @@ make # cmake --build . is same
 
 ## run test
 ```bash
-./build/test/runtests
+./build/test/run_tests
 ```
