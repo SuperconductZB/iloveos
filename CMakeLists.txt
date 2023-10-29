@@ -10,7 +10,7 @@ include_directories(
 
 add_executable(fischl
 
-  # Header files
+  # Header filesc
   lib/fischl.cpp
   lib/main.cpp
 

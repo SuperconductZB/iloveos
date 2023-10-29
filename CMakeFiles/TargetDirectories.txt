@@ -1,0 +1,8 @@
+/Users/factorialn/Projects/iloveos/CMakeFiles/fischl.dir
+/Users/factorialn/Projects/iloveos/CMakeFiles/test.dir
+/Users/factorialn/Projects/iloveos/CMakeFiles/edit_cache.dir
+/Users/factorialn/Projects/iloveos/CMakeFiles/rebuild_cache.dir
+/Users/factorialn/Projects/iloveos/test/CMakeFiles/run_tests.dir
+/Users/factorialn/Projects/iloveos/test/CMakeFiles/test.dir
+/Users/factorialn/Projects/iloveos/test/CMakeFiles/edit_cache.dir
+/Users/factorialn/Projects/iloveos/test/CMakeFiles/rebuild_cache.dir
