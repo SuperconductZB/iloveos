@@ -45,7 +45,7 @@ public:
         close(fd);
     }
 
-    int read(off_t blockNumber, char *buffer){
+    int rawdisk_read(off_t blockNumber, char *buffer){
         int fd;
 
         fd = open(dir, O_RDONLY);
@@ -77,7 +77,7 @@ public:
         
     }
 
-    int write(off_t blockNumber, char *buffer){
+    int rawdisk_write(off_t blockNumber, char *buffer){
         int fd;
 
         fd = open(dir, O_WRONLY);
