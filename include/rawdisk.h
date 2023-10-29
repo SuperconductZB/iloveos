@@ -29,14 +29,14 @@ public:
         }
 
         // Use ioctl with BLKGETSIZE to get the number of sectors
-        if (ioctl(fd, BLKGETSIZE64, &numSectors) == -1) {
+        if (ioctl(fd, BLKGETSIZE64, &diskSize) == -1) {
             perror("Error getting disk size");
             close(fd);
             exit(1);
         }
 
         // Calculate the size in bytes
-        diskSize = numSectors * 512; // Assuming a sector size of 512 bytes
+        numSectors = diskSize / 512; // Assuming a sector size of 512 bytes
 
         printf("====Initializing RawDisk====\n");
         printf("Number of sectors: %llu\n", numSectors);
