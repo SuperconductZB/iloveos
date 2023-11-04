@@ -3,8 +3,14 @@
 #include <assert.h>
 #include "rawdisk.h"
 
-int main() {
-    char *d = strdup("/dev/vdb");
+int main(int argc, char *argv[]) {
+    char *d = NULL;
+    if(argc < 2){
+        d = strdup("/dev/vdc");
+    }else{
+        d = argv[1];
+    }
+    
     RawDisk *H = new RawDisk(d);
     
     char *buf = "iloveosdfjlseirfnerig";

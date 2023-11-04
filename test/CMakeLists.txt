@@ -1,5 +1,5 @@
 set(TARGET_LAYER0 test_layer0)
-
+set(DIR_PLACE /dev/vdb)
 
 # add test sources here ... 
 add_executable(${TARGET_LAYER0}
@@ -8,4 +8,4 @@ add_executable(${TARGET_LAYER0}
 )
 
 # add test to activate ctest -VV
-add_test(NAME ${TARGET_LAYER0} COMMAND sudo ./${TARGET_LAYER0})
+add_test(NAME ${TARGET_LAYER0} COMMAND sudo ./${TARGET_LAYER0} ${DIR_PLACE})
