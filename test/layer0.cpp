@@ -4,12 +4,7 @@
 #include "rawdisk.h"
 
 int main(int argc, char *argv[]) {
-    char *d = NULL;
-    if(argc < 2){
-        d = strdup("/dev/vdc");
-    }else{
-        d = argv[1];
-    }
+    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
     
     RawDisk *H = new RawDisk(d);
     
