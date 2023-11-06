@@ -160,7 +160,7 @@ public:
                 // w.t.f is this
             }
         }
-        
+        da
         //return the block number
         inode_save();
         return freeBlockNum;
