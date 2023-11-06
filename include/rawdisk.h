@@ -14,7 +14,7 @@ class RawDisk{
     off_t diskSize;
 
 public:
-    RawDisk(const char *directory){
+    RawDisk(const char *directory) : fd(-1), dir(nullptr), numSectors(0), diskSize(0) {
         dir = directory;
         /*dir = strdup("/dev/vdc");
         numSectors = 62914560;
@@ -48,18 +48,13 @@ public:
         }
     }
 
-    int rawdisk_read(off_t blockNumber, char *buffer){
-        // Calculate the offset in bytes
-        off_t offset = blockNumber * 512;
-
-        // Move the file pointer to the desired block
-        if (lseek(fd, offset, SEEK_SET) == -1) {
-            perror("Error seeking to block");
+    int rawdisk_read(off_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            perror("Error seeking to offset");
             return -1;
         }
 
-        // Read a 512 byte-size block of data
-        ssize_t bytesRead = read(fd, buffer, 512);
+        ssize_t bytesRead = read(fd, buffer, length);
         if (bytesRead == -1) {
             perror("Error reading from device");
             return -1;
@@ -68,20 +63,16 @@ public:
         return 0;
     }
 
-    int rawdisk_write(off_t blockNumber, char *buffer){
-        // Calculate the offset in bytes
-        off_t offset = blockNumber * 512;
-
-        // Move the file pointer to the desired block
-        if (lseek(fd, offset, SEEK_SET) == -1) {
-            perror("Error seeking to block");
+    // Write a specified number of bytes at a given byte offset
+    int rawdisk_write(off_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            perror("Error seeking to offset");
             return -1;
         }
 
-        // Write a block of data
-        ssize_t bytesWrite = write(fd, buffer, 512);
-        if (bytesWrite == -1) {
-            perror("Error writing from device");
+        ssize_t bytesWritten = write(fd, buffer, length);
+        if (bytesWritten == -1) {
+            perror("Error writing to device");
             return -1;
         }
 
