@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
     for(off_t i = 0; i < 10; i++) {
-        H->rawdisk_write(i*512, buf, sizeof(buf));//Change write_API
+        H->rawdisk_write(i*512, buf, strlen(buf));//Change write_API
     }
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
     for(off_t i = 0; i < 10; i++) {
