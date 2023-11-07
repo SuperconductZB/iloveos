@@ -4,12 +4,7 @@
 #include "rawdisk.h"
 
 int main(int argc, char *argv[]) {
-    char *d = NULL;
-    if(argc < 2){
-        d = strdup("/dev/vdc");
-    }else{
-        d = argv[1];
-    }
+    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
     
     RawDisk *H = new RawDisk(d);
     
@@ -20,11 +15,11 @@ int main(int argc, char *argv[]) {
 
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
     for(off_t i = 0; i < 10; i++) {
-        H->rawdisk_write(i, buf);
+        H->rawdisk_write(i*512, buf, strlen(buf));//Change write_API
     }
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
     for(off_t i = 0; i < 10; i++) {
-        H->rawdisk_read(i, readBuffer);
+        H->rawdisk_read(i*512, readBuffer, sizeof(readBuffer));//Change read_API
         assert(strncmp(readBuffer, buf, strlen(buf)) == 0);
     }
 
