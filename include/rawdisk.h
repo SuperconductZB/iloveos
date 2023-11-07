@@ -8,21 +8,20 @@
 
 class RawDisk{
 
-    char* dir;
+    int fd;
+    const char* dir;
     off_t numSectors;
     off_t diskSize;
 
 public:
-    RawDisk(char *directory){
+    RawDisk(const char *directory) : fd(-1), dir(nullptr), numSectors(0), diskSize(0) {
         dir = directory;
         /*dir = strdup("/dev/vdc");
         numSectors = 62914560;
         diskSize = 32212254720;*/
         
-        int fd;
-
         // Open the block device (replace /dev/sdX with the actual device)
-        fd = open(dir, O_RDONLY);
+        fd = open(dir, O_RDWR); // Allow read and write
         if (fd == -1) {
             perror("Error opening device");
             exit(1);
@@ -41,71 +40,42 @@ public:
         printf("====Initializing RawDisk====\n");
         printf("Number of sectors: %llu\n", numSectors);
         printf("Disk size (in bytes): %llu\n", diskSize);
-
-        close(fd);
     }
 
-    int rawdisk_read(off_t blockNumber, char *buffer){
-        int fd;
-
-        fd = open(dir, O_RDONLY);
-        if (fd == -1) {
-            perror("Error opening device");
-            return -1;
-        }
-
-        // Calculate the offset in bytes
-        off_t offset = blockNumber * 512;
-
-        // Move the file pointer to the desired block
-        if (lseek(fd, offset, SEEK_SET) == -1) {
-            perror("Error seeking to block");
+    ~RawDisk() {
+        if (fd != -1) {
             close(fd);
+        }
+    }
+
+    int rawdisk_read(off_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            perror("Error seeking to offset");
             return -1;
         }
 
-        // Read a block of data
-        ssize_t bytesRead = read(fd, buffer, 512);
+        ssize_t bytesRead = read(fd, buffer, length);
         if (bytesRead == -1) {
             perror("Error reading from device");
-            close(fd);
             return -1;
         }
 
-        // Process the data (e.g., data recovery or analysis)
-        close(fd);
-        
+        return 0;
     }
 
-    int rawdisk_write(off_t blockNumber, char *buffer){
-        int fd;
-
-        fd = open(dir, O_WRONLY);
-        if (fd == -1) {
-            perror("Error opening device");
+    // Write a specified number of bytes at a given byte offset
+    int rawdisk_write(off_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+            perror("Error seeking to offset");
             return -1;
         }
 
-        // Calculate the offset in bytes
-        off_t offset = blockNumber * 512;
-
-        // Move the file pointer to the desired block
-        if (lseek(fd, offset, SEEK_SET) == -1) {
-            perror("Error seeking to block");
-            close(fd);
+        ssize_t bytesWritten = write(fd, buffer, length);
+        if (bytesWritten == -1) {
+            perror("Error writing to device");
             return -1;
         }
 
-        // Write a block of data
-        ssize_t bytesWrite = write(fd, buffer, 512);
-        if (bytesWrite == -1) {
-            perror("Error writing from device");
-            close(fd);
-            return -1;
-        }
-
-        // Process the data (e.g., data recovery or analysis)
-        close(fd);
         return 0;
     }
 
