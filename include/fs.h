@@ -139,6 +139,57 @@ public:
         return freeBlockNum;
     }
 
+    bool allo_single_indirect(RawDisk &disk, off_t &single_i, off_t freeBlockNum) {
+        if (single_i == 0){
+            single_i = datablock_allocate_in_list(disk);
+        }
+        bool inSingle = false;
+        char buffer[512] = {0};
+        disk.rawdisk_read(single_i*512, buffer, sizeof(buffer));
+        for (int i = 0; i < 512; i++){
+            if(buffer[i] == 0){
+                inSingle = true;
+                buffer[i] = freeBlockNum;
+                break;
+            }
+        return inSingle;
+    }
+
+    bool allo_double_indirect(RawDisk &disk, off_t &double_i, off_t freeBlockNum) {
+        if (double_i == 0){
+            double_i = datablock_allocate_in_list(disk);
+        }
+        bool inDouble = false;
+        char buffer[512] = {0};
+        disk.rawdisk_read(double_i*512, buffer, sizeof(buffer));
+        for (int i = 0; i < 512; i++){
+            bool flag = allo_single_indirect(disk, buffer[i], freeBlockNum);
+            if (flag){
+                inDouble = true;
+                break;
+            }
+        } 
+        return inDouble;
+    }
+
+    bool allo_triple_indirect(RawDisk &disk, off_t &triple_i, off_t freeBlockNum) {
+        if (triple_i == 0){
+            triple_i = datablock_allocate_in_list(disk);
+        }
+        bool inTriple = false;
+        char buffer[512] = {0};
+        disk.rawdisk_read(triple_i*512, buffer, sizeof(buffer));
+        for (int i = 0; i < 512, i++){
+            bool flag = allo_double_indirect(disk, buffer[i], freeBlockNum);
+            if (flag){
+                inTriple = true;
+                break;
+            }
+        }
+        return inTriple;
+    }
+    
+    
     // allowcate 1 datablock and add to the end of the file
     off_t datablock_allocate(RawDisk &disk){
         //do we need to check dynamic?
@@ -153,32 +204,14 @@ public:
                 break;
             }
         if(!inBlocks){
-            if (single_indirect == 0){
-                single_indirect = datablock_allocate_in_list(disk);
-            }
-            int inSingle = false;
-            char buffer[512] = {0};
-            disk.rawdisk_read(single_indirect*512, buffer, sizeof(buffer));
-            for (int i = 0; i < 512; i++){
-                if(buffer[i] == 0){
-                    inSingle = true;
-                    buffer[i] = freeBlockNum;
-                    break;
+            bool inSingle = allo_single_indirect(disk, single_indirect, freeBlockNum);
+            if (!inSingle){
+                bool inDouble = allo_double_indirect(disk, double_indirect, freeBlockNum);
+                if (!inDouble){
+                    bool inTriple = allo_triple_indirect(disk, triple_indirect, freeBlockNum);
+                    // wait to deal with too big files
                 }
-                //ask which scope    
-                if(i < 512){
-                    disk.rawdisk_write(single_indirect*512, buffer, sizeof(buffer));
-                }
-                else{
-                    if (double_indirect == 0){
-                        double_indirect = datablock_allocate_in_list(disk);
-                    }
-                    int inDouble = false;
-                    disk.rawdisk_read(double_indirect*512, buffer, sizeof(buffer));
-                    // w.t.f is this
-                }
-            }
-                
+            }      
         }
         
         //return the block number
@@ -186,9 +219,78 @@ public:
         return freeBlockNum;
     }
 
-    // deallocate 1 datablock from the end of the file
-    void datablock_deallocate(){
+    void datablock_deallocate_in_list(off_t freeBlockNum) {
 
+    }
+
+    bool deallow_single_indirect(RawDisk &disk, off_t &single_i){
+        if (single_i == 0){
+            return false;
+        }
+        char buffer[512] = {0};
+        int delpoint = -1;
+        disk.rawdisk_read(single_i*512, buffer, sizeof(buffer));
+        for (int i=255; i >= 0; i--)
+            if(buffer[i] != 0){
+                buffer[i] = 0;
+                delpoint = i;
+                break;
+            }
+        if (delpoint == 0 && buffer[0] == 0){
+            datablock_deallocate_in_list(single_i);
+            single_i = 0;
+        }
+        return true;
+    }
+
+    bool deallow_double_indirect(RawDisk &disk, off_t &double_i){
+        if (double_i == 0){
+            return false;
+        }
+        char buffer[512] = {0};
+        int delpoint = -1;
+        disk.rawdisk_read(double_i*512, buffer, sizeof(buffer));
+        for (int i=255; i >= 0; i--){
+            bool inSingle = deallo_single_indirect(disk, buffer[i]);
+            if (inSingle){
+                delpoint = i;
+                break;
+            }
+        }
+        if (delpoint == 0 && buffer[0] == 0){
+            datablock_deallocate_in_list(double_i);
+            double_i = 0;
+        }
+        return true;
+    }
+
+    bool deallo_triple_indirect(RawDisk &disk, off_t &triple_i){
+        if (triple_i == 0){
+            return false;
+        }
+        char buffer[512] = {0};
+        int delpoint = -1;
+        disk.rawdisk_read(triple_i*512, buffer, sizeof(buffer));
+        for (int i=255; i >= 0; i--){
+            bool inDouble = deallo_double_indirect(disk, buffer[i]);
+            if (inDouble){
+                delpoint = i;
+                break;
+            }
+        }
+        if (delpoint == 0 && buffer[0] == 0){
+            datablock_deallocate_in_list(triple_i);
+            triple_i = 0;
+        }
+        return true;
+    }
+
+    // deallocate 1 datablock from the end of the file
+    void datablock_deallocate(RawDisk &disk){
+        // find the last datablock and remove it from inode (triple->direct)
+        
+
+        // add it back to freeBlocklist
     }
 };
 
