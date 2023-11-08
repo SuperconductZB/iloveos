@@ -22,7 +22,7 @@ public:
 
     }
     static off_t getFreeListHead(RawDisk &disk){
-        char buffer[SECTOR_SIZE] = {0};
+        char buffer[8] = {0};
         disk.rawdisk_read(0, buffer, sizeof(buffer));
         off_t t = 0;
         for (int j = 0; j < 8; j++)
@@ -31,11 +31,28 @@ public:
     }
 
     static void writeFreeListHead(RawDisk &disk, off_t t){
-        char buffer[SECTOR_SIZE] = {0};
+        char buffer[8] = {0};
         for (int j = 0; j < 8; j++){
             buffer[j] = (t >> (8 * j)) & 0xFF;
         }
         disk.rawdisk_write(0, buffer, sizeof(buffer));
+    }
+
+    static off_t getFreeINodeHead(RawDisk &disk){
+        char buffer[8] = {0};
+        disk.rawdisk_read(8, buffer, sizeof(buffer));
+        off_t t = 0;
+        for (int j = 0; j < 8; j++)
+            t = t | (((off_t)buffer[j])<<(8*j));
+        return t;
+    }
+
+    static void writeFreeINodeHead(RawDisk &disk, off_t t){
+        char buffer[8] = {0};
+        for (int j = 0; j < 8; j++){
+            buffer[j] = (t >> (8 * j)) & 0xFF;
+        }
+        disk.rawdisk_write(8, buffer, sizeof(buffer));
     }
 };
 
@@ -382,6 +399,18 @@ class INodeOperation{
 public:
     //initialization of the rawdisk
     void initialize(RawDisk &disk){
+        // initialize Inode list head
+        SuperBlock::writeFreeINodeHead(disk, 1);
+        for (off_t i = 1; i < MAX_INODE; i++){
+            char buffer[SECTOR_SIZE] = {0};
+            off_t t = i + 1;
+            if (t < MAX_INODE){
+                for (int j = 0; j < 8; j++){
+                    buffer[j] = (t >> (8 * j)) & 0xFF;
+                }
+            }
+            disk.rawdisk_write(i*SECTOR_SIZE, buffer, sizeof(buffer));
+        }
         SuperBlock::writeFreeListHead(disk, MAX_INODE*SECTOR_SIZE); // maximum inode number 2^19 0x80000
         //Have tested this initialize function but MAX_BLOCK too much, MAX_INODE*2 works
         for (off_t i = MAX_INODE; i < MAX_BLOCKNUM-4096; i += 2048*8){
@@ -396,16 +425,28 @@ public:
         }
     }
 
-    // allocate an inode and return the number of the inode
+    // allocate an inode from free inode list head and return the number of the inode
     // the i-th inode is in the i-th block
-    off_t inode_allocate(){
-        
+    off_t inode_allocate(RawDisk &disk){
+        off_t freeINodeHead = SuperBlock::getFreeINodeHead(disk);
+        char buffer[SECTOR_SIZE] = {0};
+        disk.rawdisk_read(freeINodeHead*SECTOR_SIZE, buffer, sizeof(buffer));
+        off_t newINodeHead = read_byte_at(0, buffer);
+        // deal with no more INode
+        SuperBlock::writeFreeINodeHead(disk, newINodeHead);
+        //to do: initialize the INode on disk at freeINodeHead
+
         //return inode number
+        return freeINodeHead;
     }
 
-    // 
-    void inode_free(off_t iNodeNumber){
-
+    // free the inode and add it to the free inode list head
+    void inode_free(RawDisk &disk, off_t INodeNumber){
+        off_t freeINodeHead = SuperBlock::getFreeINodeHead(disk);
+        char buffer[SECTOR_SIZE] = {0};
+        write_byte_at(freeINodeHead, 0, buffer);
+        disk.rawdisk_write(INodeNumber*SECTOR_SIZE, buffer, sizeof(buffer));
+        SuperBlock::writeFreeINodeHead(disk, INodeNumber);
     }
 
     //ignore for now
