@@ -148,9 +148,7 @@ public:
             }
         }
         if (!notFull){
-            off_t next_header = 0;
-            for (int j = 0; j < 8; j++)
-                next_header = next_header | (((off_t)buffer[j])<<(8*j));
+            off_t next_header = read_byte_at(0, buffer);
             SuperBlock::writeFreeListHead(disk, next_header);
         }
         return freeBlockNum;
@@ -247,10 +245,27 @@ public:
 
     void datablock_deallocate_in_list(off_t freeBlockNum) {
         // find the related 2048block head
+        off_t freeBlockHead = ((freeBlockNum/SECTOR_SIZE-MAX_INODE)/(8*2048)*(8*2048)+MAX_INODE)*SECTOR_SIZE;
 
         // mark it alive in its bitmap
-
+        char buffer[IO_BLOCK_SIZE] = {0};
+        bool notEmpty = false;
+        disk.rawdisk_read(freeBlockHead, buffer, sizeof(buffer));
+        for (int i = 8; i < 264; i++){
+            if(buffer[i] != 0){
+                notEmpty = true;
+            }
+        }
+        off_t inBlockPos = (freeBlockNum-freeBlockHead)/IO_BLOCK_SIZE-1;
+        buffer[8+inBlockPos/8] |= (1<<(inBlockPos%8));
+    
         // if its bitmap was 0, add it back to the list head
+        if(!notEmpty){
+            off_t freeListHead = SuperBlock::getFreeListHead(disk);
+            write_byte_at(freeListHead, 0, buffer);
+            SuperBlock::writeFreeListHead(disk, freeBlockHead);
+        }
+        disk.rawdisk_write(freeBlockHead, buffer, sizeof(buffer));
     }
 
     off_t deallo_single_indirect(RawDisk &disk, off_t &single_i){
