@@ -4,7 +4,7 @@
 int main(){
     fischl *F = new fischl;
     F->init();
-    char *d = strdup("/dev/vdc");
+    uchar *d = strdup("/dev/vdc");
     RawDisk *H = new RawDisk(d);
     return 0;
 }

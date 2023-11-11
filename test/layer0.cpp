@@ -3,13 +3,13 @@
 #include <assert.h>
 #include "rawdisk.h"
 
-int main(int argc, char *argv[]) {
-    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
+int main(int argc, uchar *argv[]) {
+    const uchar* d = (argc < 2) ? "/dev/vdc" : argv[1];
     
     RawDisk *H = new RawDisk(d);
     
-    char *buf = "iloveosdfjlseirfnerig";
-    char readBuffer[512] = {0};  // Initialize to zeros
+    uchar *buf = "iloveosdfjlseirfnerig";
+    uchar readBuffer[512] = {0};  // Initialize to zeros
 
     //printf("dir %s, numSectors %lld, diskSize %lld \n", H->dir, H->numSectors, H->diskSize);
 

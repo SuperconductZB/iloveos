@@ -6,15 +6,17 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h> 
 
+typedef unsigned char uchar;
+
 class RawDisk{
 
     int fd;
-    const char* dir;
+    const uchar* dir;
     u_int64_t numSectors;
     u_int64_t diskSize;
 
 public:
-    RawDisk(const char *directory) : fd(-1), dir(nullptr), numSectors(0), diskSize(0) {
+    RawDisk(const uchar *directory) : fd(-1), dir(nullptr), numSectors(0), diskSize(0) {
         dir = directory;
         /*dir = strdup("/dev/vdc");
         numSectors = 62914560;
@@ -48,7 +50,7 @@ public:
         }
     }
 
-    int rawdisk_read(u_int64_t offset, char *buffer, size_t length) {
+    int rawdisk_read(u_int64_t offset, uchar *buffer, size_t length) {
         if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
             perror("Error seeking to offset");
             return -1;
@@ -64,7 +66,7 @@ public:
     }
 
     // Write a specified number of bytes at a given byte offset
-    int rawdisk_write(u_int64_t offset, char *buffer, size_t length) {
+    int rawdisk_write(u_int64_t offset, uchar *buffer, size_t length) {
         if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
             perror("Error seeking to offset");
             return -1;
