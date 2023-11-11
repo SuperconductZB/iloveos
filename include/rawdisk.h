@@ -6,14 +6,12 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h> 
 
-typedef unsigned long long off_t;
-
 class RawDisk{
 
     int fd;
     const char* dir;
-    off_t numSectors;
-    off_t diskSize;
+    u_int64_t numSectors;
+    u_int64_t diskSize;
 
 public:
     RawDisk(const char *directory) : fd(-1), dir(nullptr), numSectors(0), diskSize(0) {
@@ -50,8 +48,8 @@ public:
         }
     }
 
-    int rawdisk_read(off_t offset, char *buffer, size_t length) {
-        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+    int rawdisk_read(u_int64_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
             perror("Error seeking to offset");
             return -1;
         }
@@ -66,8 +64,8 @@ public:
     }
 
     // Write a specified number of bytes at a given byte offset
-    int rawdisk_write(off_t offset, char *buffer, size_t length) {
-        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+    int rawdisk_write(u_int64_t offset, char *buffer, size_t length) {
+        if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
             perror("Error seeking to offset");
             return -1;
         }
