@@ -10,7 +10,7 @@ one inode equipped with one 512 bytes block
 #define SECTOR_SIZE 512
 #define IO_BLOCK_SIZE 4096
 #define MAX_INODE 524288
-#define MAX_BLOCKNUM 62914560
+#define MAX_BLOCKNUM MAX_INODE*2 //62914560
 
 class SuperBlock{
 
@@ -77,7 +77,7 @@ public:
         current_pos += 8;
     }
 
-    off_t read_byte_at(int current_pos, char *buffer){
+    static off_t read_byte_at(int current_pos, char *buffer){
         off_t t = 0;
         for (int j = 0; j < 8; j++)
             t = t | (((off_t)buffer[j+current_pos])<<(8*j));
@@ -110,7 +110,7 @@ public:
         current_pos += 8;
     }
 
-    void write_byte_at(off_t t, int current_pos, char *buffer){
+    static void write_byte_at(off_t t, int current_pos, char *buffer){
         for (int j = 0; j < 8; j++){
             buffer[j+current_pos] = t & (((off_t)1<<(8))-1);
             t >>= 8;
@@ -217,7 +217,7 @@ public:
         bool inTriple = false;
         char buffer[IO_BLOCK_SIZE] = {0};
         disk.rawdisk_read(triple_i, buffer, sizeof(buffer));
-        for (int i = 0; i < IO_BLOCK_SIZE, i+=8){
+        for (int i = 0; i < IO_BLOCK_SIZE; i+=8){
             off_t addr = read_byte_at(i, buffer);
             bool flag = allo_double_indirect(disk, addr, freeBlockNum);
             if (flag){
@@ -260,7 +260,7 @@ public:
         return freeBlockNum;
     }
 
-    void datablock_deallocate_in_list(off_t freeBlockNum) {
+    void datablock_deallocate_in_list(off_t freeBlockNum, RawDisk &disk) {
         // find the related 2048block head
         off_t freeBlockHead = ((freeBlockNum/SECTOR_SIZE-MAX_INODE)/(8*2048)*(8*2048)+MAX_INODE)*SECTOR_SIZE;
 
@@ -306,7 +306,7 @@ public:
         disk.rawdisk_read(triple_i, buffer, sizeof(buffer));
         off_t addr = read_byte_at(0, buffer);
         if (delpoint == 0 && addr == 0){
-            datablock_deallocate_in_list(single_i);
+            datablock_deallocate_in_list(single_i, disk);
             single_i = 0;
         }
         return freeBlockNum;
@@ -333,7 +333,7 @@ public:
         disk.rawdisk_read(triple_i, buffer, sizeof(buffer));
         off_t addr = read_byte_at(0, buffer);
         if (delpoint == 0 && addr == 0){
-            datablock_deallocate_in_list(double_i);
+            datablock_deallocate_in_list(double_i, disk);
             double_i = 0;
         }
         return freeBlockNum;
@@ -360,7 +360,7 @@ public:
         disk.rawdisk_read(triple_i, buffer, sizeof(buffer));
         off_t addr = read_byte_at(0, buffer);
         if (delpoint == 0 && addr == 0){
-            datablock_deallocate_in_list(triple_i);
+            datablock_deallocate_in_list(triple_i, disk);
             triple_i = 0;
         }
         return freeBlockNum;
@@ -378,7 +378,7 @@ public:
                 if(!freeBlockNum){
                     for(int i = 47; i>=0; i--)
                         if(blocks[i] != 0){
-                            freeBlockNum = block[i];
+                            freeBlockNum = blocks[i];
                             blocks[i] = 0;
                             break;
                         }
@@ -388,7 +388,7 @@ public:
         }
 
         // add it back to freeBlocklist
-        datablock_deallocate_in_list(freeBlockNum);
+        datablock_deallocate_in_list(freeBlockNum, disk);
         inode_save(disk);
     }
 };
@@ -416,10 +416,9 @@ public:
         for (off_t i = MAX_INODE; i < MAX_BLOCKNUM-4096; i += 2048*8){
             char buffer[IO_BLOCK_SIZE] = {0};
             off_t t = (i + 2048*8)*SECTOR_SIZE;
-            if (t < MAX_BLOCKNUM){
-                for (int j = 0; j < 8; j++){
-                    buffer[j] = (t >> (8 * j)) & 0xFF;
-                }
+            //t is address, storing in to buffer
+            for (int j = 0; j < 8; j++){
+                buffer[j] = (t >> (8 * j)) & 0xFF;
             }
             disk.rawdisk_write(i*SECTOR_SIZE, buffer, sizeof(buffer));
         }
@@ -431,7 +430,7 @@ public:
         off_t freeINodeHead = SuperBlock::getFreeINodeHead(disk);
         char buffer[SECTOR_SIZE] = {0};
         disk.rawdisk_read(freeINodeHead*SECTOR_SIZE, buffer, sizeof(buffer));
-        off_t newINodeHead = read_byte_at(0, buffer);
+        off_t newINodeHead = INode::read_byte_at(0, buffer);
         // deal with no more INode
         SuperBlock::writeFreeINodeHead(disk, newINodeHead);
         //to do: initialize the INode on disk at freeINodeHead
@@ -444,7 +443,7 @@ public:
     void inode_free(RawDisk &disk, off_t INodeNumber){
         off_t freeINodeHead = SuperBlock::getFreeINodeHead(disk);
         char buffer[SECTOR_SIZE] = {0};
-        write_byte_at(freeINodeHead, 0, buffer);
+        INode::write_byte_at(freeINodeHead, 0, buffer);
         disk.rawdisk_write(INodeNumber*SECTOR_SIZE, buffer, sizeof(buffer));
         SuperBlock::writeFreeINodeHead(disk, INodeNumber);
     }
