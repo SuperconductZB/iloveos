@@ -6,6 +6,8 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h> 
 
+typedef unsigned long long off_t;
+
 class RawDisk{
 
     int fd;
