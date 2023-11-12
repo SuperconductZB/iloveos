@@ -323,7 +323,7 @@ public:
         return freeBlockNum;
     }
 
-    bool deallo_double_indirect(RawDisk &disk, u_int64_t &double_i){
+    u_int64_t deallo_double_indirect(RawDisk &disk, u_int64_t &double_i){
         if (double_i == 0){
             return false;
         }
@@ -350,7 +350,7 @@ public:
         return freeBlockNum;
     }
 
-    bool deallo_triple_indirect(RawDisk &disk, u_int64_t &triple_i){
+    u_int64_t deallo_triple_indirect(RawDisk &disk, u_int64_t &triple_i){
         if (triple_i == 0){
             return false;
         }
