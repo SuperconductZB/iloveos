@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     H->rawdisk_read((MAX_BLOCKNUM - 2048*8) * SECTOR_SIZE, buffer, sizeof(buffer));
     t = 0;
     for (int j = 0; j < 8; j++) 
-        t |= ((u_int64_t)(char)buffer[j]) << (8 * j);
+        t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
     assert(t == (MAX_BLOCKNUM)*SECTOR_SIZE);
     //initialize
@@ -76,6 +76,32 @@ int main(int argc, char *argv[]) {
     for(int i=0;i<20;i++){
         printf(" %d", inode_list[i]);
     }
+    printf("}\n");
+    
+    INode inode_inside[10];
+    for(int i=0;i<10;i++){
+        inode_inside[i].inode_construct(inode_list[i],*H);
+        printf("%dth data block starting addres: ", i);
+        for(int j=0;j<6;j++){
+            printf("%d," ,inode_inside[i].datablock_allocate(*H));
+        }
+        printf("\n");
+    }
+    for(int i=0;i<10;i++){
+        printf("%dth data block free addres: ", i);
+        for(int j=0;j<3;j++){
+            printf("%d," ,inode_inside[i].datablock_deallocate(*H));
+        }
+        printf("\n");
+    }
+    for(int i=0;i<10;i++){
+        printf("%dth data block allocate again addres: ", i);
+        for(int j=0;j<3;j++){
+            printf("%d," ,inode_inside[i].datablock_allocate(*H));
+        }
+        printf("\n");
+    }
+
     printf("}\n");
     delete H;  // Delete the RawDisk object
 

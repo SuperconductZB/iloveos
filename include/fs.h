@@ -145,7 +145,7 @@ public:
         u_int64_t freeBlockNum = 0;
         disk.rawdisk_read(freeListHead, buffer, sizeof(buffer));
         for (int i = 8; i < 264; i++){
-            if(buffer[i] != 255){
+            if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
                 int j = 0;
                 for (j = 0; j < 8; j++){
                     if ((buffer[i]&(1<<j)) == 0){
@@ -153,18 +153,22 @@ public:
                         break;
                     }
                 }
-                freeBlockNum = freeListHead + ((i-8)*8 + j + 1)*IO_BLOCK_SIZE;
+                if (j < 8){
+                    freeBlockNum = freeListHead + ((i-8)*8 + j + 1)*IO_BLOCK_SIZE;
+                    break;
+                }
             }
         }
         disk.rawdisk_write(freeListHead, buffer, sizeof(buffer));
         bool notFull = false;
         for (int i = 8; i < 264; i++){
-            if((i < 263 && buffer[i] != 255) || (i == 263 && buffer[i] != 127)){
+            if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
                 notFull = true;
                 break;
             }
         }
         if (!notFull){
+            printf("HEADER REMOVAL DETECTED %llu %llu\n", freeListHead, freeBlockNum);
             u_int64_t next_header = read_byte_at(0, buffer);
             SuperBlock::writeFreeListHead(disk, next_header);
         }
@@ -274,7 +278,7 @@ public:
             }
         }
         u_int64_t inBlockPos = (freeBlockNum-freeBlockHead)/IO_BLOCK_SIZE-1;
-        buffer[8+inBlockPos/8] |= (1<<(inBlockPos%8));
+        buffer[8+inBlockPos/8] &= (-1)^(1<<(inBlockPos%8));
     
         // if its bitmap was 0, add it back to the list head
         if(!notEmpty){
@@ -367,7 +371,7 @@ public:
     }
 
     // deallocate 1 datablock from the end of the file
-    void datablock_deallocate(RawDisk &disk){
+    u_int64_t datablock_deallocate(RawDisk &disk){
         // find the last datablock and remove it from inode (triple->direct)
         u_int64_t freeBlockNum = 0;
         freeBlockNum = deallo_triple_indirect(disk, triple_indirect);
@@ -390,6 +394,7 @@ public:
         // add it back to freeBlocklist
         datablock_deallocate_in_list(freeBlockNum, disk);
         inode_save(disk);
+        return freeBlockNum;
     }
 };
 
