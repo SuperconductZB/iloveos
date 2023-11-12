@@ -81,8 +81,10 @@ int main(int argc, char *argv[]) {
     
     // Test Big File (Use direct, single indirect, double indirect)
     printf("=== Big File Test ===\n");
+    u_int64_t lastAllc = 0;
     for(int j=0;j<5000;j++){
         u_int64_t allcBlockNum = inode_inside[0].datablock_allocate(*H);
+        lastAllc = allcBlockNum;
         u_int64_t fh = SuperBlock::getFreeListHead(*H);
         if (allcBlockNum % 2048 != 0 || allcBlockNum < 2048*512 || allcBlockNum >= 25*2048*512 || fh >= 51200*512) {
             printf("%d, Alloc Block Number: %llu\n", j, allcBlockNum);
@@ -90,6 +92,7 @@ int main(int argc, char *argv[]) {
             assert(false);
         }
     }
+    printf("last allocate for big file: %llu\n", lastAllc);
     printf("Finished Allocating\n");
     printf("freeListHead: %d \n", SuperBlock::getFreeListHead(*H));
     for(int j=0;j<5000;j++){

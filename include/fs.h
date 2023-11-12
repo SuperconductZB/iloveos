@@ -9,8 +9,8 @@ one inode equipped with one 512 bytes block
 *****************************************************/
 #define SECTOR_SIZE 512
 #define IO_BLOCK_SIZE 4096
-#define MAX_INODE 524288
-#define MAX_BLOCKNUM MAX_INODE*2 //62914560
+#define MAX_INODE 2048
+#define MAX_BLOCKNUM 51200 //62914560
 
 class SuperBlock{
 
@@ -169,8 +169,8 @@ public:
             }
         }
         if (!notFull){
-            printf("HEADER REMOVAL DETECTED %llu %llu\n", freeListHead, freeBlockNum);
             u_int64_t next_header = read_byte_at(0, buffer);
+            printf("HEADER MOVE (Cause: Alloc) %llu -> %llu (%llu)\n", freeListHead, next_header, freeBlockNum);
             SuperBlock::writeFreeListHead(disk, next_header);
         }
         return freeBlockNum;
@@ -291,6 +291,7 @@ public:
         if(!nowInList){
             u_int64_t freeListHead = SuperBlock::getFreeListHead(disk);
             write_byte_at(freeListHead, 0, buffer);
+            printf("HEADER MOVE (Cause: Dealloc) %llu -> %llu\n", freeListHead, freeBlockHead);
             SuperBlock::writeFreeListHead(disk, freeBlockHead);
         }
         disk.rawdisk_write(freeBlockHead, buffer, sizeof(buffer));
