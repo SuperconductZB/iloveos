@@ -143,8 +143,7 @@ public:
         */
         char buffer[IO_BLOCK_SIZE] = {0};
         u_int64_t freeBlockNum = 0;
-        disk.rawdisk_read(freeListHea
-        d, buffer, sizeof(buffer));
+        disk.rawdisk_read(freeListHead, buffer, sizeof(buffer));
         for (int i = 8; i < 264; i++){
             if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
                 int j = 0;
