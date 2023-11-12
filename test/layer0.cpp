@@ -14,11 +14,11 @@ int main(int argc, char *argv[]) {
     //printf("dir %s, numSectors %lld, diskSize %lld \n", H->dir, H->numSectors, H->diskSize);
 
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
-    for(off_t i = 0; i < 10; i++) {
+    for(u_int64_t i = 0; i < 10; i++) {
         H->rawdisk_write(i*512, buf, strlen(buf));//Change write_API
     }
     //use number to substitute H->getnumSector(), getnumSectors() are not yest implemented
-    for(off_t i = 0; i < 10; i++) {
+    for(u_int64_t i = 0; i < 10; i++) {
         H->rawdisk_read(i*512, readBuffer, sizeof(readBuffer));//Change read_API
         assert(strncmp(readBuffer, buf, strlen(buf)) == 0);
     }
