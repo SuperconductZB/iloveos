@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(
   # fischl include files
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/googletest/googletest/include
 )
 
 add_executable(fischl
@@ -18,3 +19,4 @@ add_executable(fischl
 
 enable_testing()
 add_subdirectory(test)
+add_subdirectory(googletest)
