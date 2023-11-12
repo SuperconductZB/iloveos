@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <gtest/gtest.h>
 #include "fs.h"
 #include <inttypes.h>
 
-int main(int argc, char *argv[]) {
-    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
-    
+const char* d;
+
+TEST(Layer1Test, APItest) {   
     RawDisk *H = new RawDisk(d);
 
     printf("test inode\n");
@@ -20,21 +21,21 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < 8; j++) 
         t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-    assert(t == 2);//the first 1th unused inode will store the next unused inode 2th 
+    EXPECT_EQ(t, 2);//the first 1th unused inode will store the next unused inode 2th 
     //test the number before end of inode 524286th
     H->rawdisk_read((MAX_INODE - 2) * SECTOR_SIZE, buffer, sizeof(buffer));
     t = 0;
     for (int j = 0; j < 8; j++) 
         t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
     
-    assert(t == MAX_INODE - 1);//store the maximun th inode
+    EXPECT_EQ(t, MAX_INODE - 1);//store the maximun th inode
     //test the end of inode 524287th
     H->rawdisk_read((MAX_INODE - 1) * SECTOR_SIZE, buffer, sizeof(buffer));
     t = 0;
     for (int j = 0; j < 8; j++) 
         t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-    assert(t == 0);//the end of inode(524287th inode) do not have the next inode address
+    EXPECT_EQ(t, 0);//the end of inode(524287th inode) do not have the next inode address
     /**************************test datablock Initialization***************************/
     //we separate 2048 4kB I/O block(1+2047) as a group and the first I/O block will manage the following 2047 I/O block usage.
     //the first 8 bytes(0~7) in first I/O block store the address of next first I/O block, the following 256(8~263) bytes record 2047 I/O block usage.
@@ -44,14 +45,14 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < 8; j++) 
         t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-    assert(t == (MAX_INODE+2048*8)*SECTOR_SIZE);//the first 8 bytes of 4k I/O block will store the next address(after 2048*4k I/O block)
+    EXPECT_EQ(t, (MAX_INODE+2048*8)*SECTOR_SIZE);//the first 8 bytes of 4k I/O block will store the next address(after 2048*4k I/O block)
     //test the end of the datablock
     H->rawdisk_read((MAX_BLOCKNUM - 2048*8) * SECTOR_SIZE, buffer, sizeof(buffer));
     t = 0;
     for (int j = 0; j < 8; j++) 
         t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-    assert(t == (MAX_BLOCKNUM)*SECTOR_SIZE);
+    EXPECT_EQ(t, (MAX_BLOCKNUM)*SECTOR_SIZE);
 
     /***************************test inode de/allocation**********************************/
     //when requesting an inode, the inode_allocation will give you the inode number, we use inode_list to store the sequence allocate inode
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
     //printf("Allocate 20 inode num:{");
     for(int i=0;i<20;i++){
         inode_list[i] = inop.inode_allocate(*H);
-        assert(inode_list[i] == i+1);
+        EXPECT_EQ(inode_list[i], i+1);
         //printf(" %d", inode_list[i]);
     }
     //printf("}\n");
@@ -75,7 +76,7 @@ int main(int argc, char *argv[]) {
     for(int i=10;i<20;i++){
         inode_list[i] = inop.inode_allocate(*H);
         //printf("inode %d, rec_f %d\n,", inode_list[i],record_free[rec]);
-        assert(inode_list[i] == record_free[rec]);
+        EXPECT_EQ(inode_list[i], record_free[rec]);
         rec--;
     }
     printf("}\n");
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
     for(int i=0;i<10;i++){
         //printf("%dth data block allocate again addres: ", i);
         for(int j=0;j<3;j++){
-            assert(inode_inside[i].datablock_allocate(*H) == rec_datablock_free[i][j]);
+            EXPECT_EQ(inode_inside[i].datablock_allocate(*H), rec_datablock_free[i][j]);
             //printf("%d," ,inode_inside[i].datablock_allocate(*H));
         }
         //printf("\n");
@@ -113,6 +114,10 @@ int main(int argc, char *argv[]) {
 
     //printf("}\n");
     delete H;  // Delete the RawDisk object
+}
 
-    return 0;
+int main(int argc, char **argv) {
+    d = (argc < 2) ? "/dev/vdc" : argv[1];//how to do with this?
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
