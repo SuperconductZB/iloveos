@@ -17,7 +17,7 @@ one inode equipped with one 512 bytes block
 class SuperBlock{
 
 public:
-    SuperBlock(const char *directory){
+    SuperBlock(){
 
     }
     ~SuperBlock(){
@@ -145,7 +145,8 @@ public:
         */
         char buffer[IO_BLOCK_SIZE] = {0};
         u_int64_t freeBlockNum = 0;
-        disk.rawdisk_read(freeListHead, buffer, sizeof(buffer));
+        disk.rawdisk_read(freeListHea
+        d, buffer, sizeof(buffer));
         for (int i = 8; i < 264; i++){
             if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
                 int j = 0;
@@ -181,9 +182,8 @@ public:
     bool allo_single_indirect(RawDisk &disk, u_int64_t &single_i, u_int64_t freeBlockNum) {
         if (single_i == 0){
             single_i = datablock_allocate_in_list(disk);
-            char init_buffer[IO_BLOCK_SIZE] = {0};
-            disk.rawdisk_write(single_i, init_buffer, sizeof(init_buffer));
-            // I think the same should be done to alloc double, triple indirect
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(single_i, new_buffer, sizeof(new_buffer));
         }
         bool inSingle = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -203,8 +203,8 @@ public:
     bool allo_double_indirect(RawDisk &disk, u_int64_t &double_i, u_int64_t freeBlockNum) {
         if (double_i == 0){
             double_i = datablock_allocate_in_list(disk);
-            char init_buffer[IO_BLOCK_SIZE] = {0};
-            disk.rawdisk_write(double_i, init_buffer, sizeof(init_buffer));
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(double_i, new_buffer, sizeof(new_buffer));
         }
         bool inDouble = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -225,8 +225,8 @@ public:
     bool allo_triple_indirect(RawDisk &disk, u_int64_t &triple_i, u_int64_t freeBlockNum) {
         if (triple_i == 0){
             triple_i = datablock_allocate_in_list(disk);
-            char init_buffer[IO_BLOCK_SIZE] = {0};
-            disk.rawdisk_write(triple_i, init_buffer, sizeof(init_buffer));
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(triple_i, new_buffer, sizeof(new_buffer));
         }
         bool inTriple = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -279,6 +279,7 @@ public:
         u_int64_t freeBlockHead = ((freeBlockNum/SECTOR_SIZE-MAX_INODE)/(8*2048)*(8*2048)+MAX_INODE)*SECTOR_SIZE;
 
         char buffer[IO_BLOCK_SIZE] = {0};
+        bool nowInList = false;
         disk.rawdisk_read(freeBlockHead, buffer, sizeof(buffer));
 
         // mark it alive in its bitmap
@@ -287,13 +288,13 @@ public:
 
         bool notEmpty = false;
         for (int i = 8; i < 264; i++){
-            if(buffer[i] != 0){
-                notEmpty = true;
+            if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
+                nowInList = true;
             }
         }
     
         // if its bitmap was 0, add it back to the list head
-        if(!notEmpty){
+        if(!nowInList){
             u_int64_t freeListHead = SuperBlock::getFreeListHead(disk);
             write_byte_at(freeListHead, 0, buffer);
             printf("HEADER MOVE (Cause: Dealloc) %llu -> %llu\n", freeListHead, freeBlockHead);
