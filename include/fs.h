@@ -15,7 +15,7 @@ one inode equipped with one 512 bytes block
 class SuperBlock{
 
 public:
-    SuperBlock(const char *directory){
+    SuperBlock(){
 
     }
     ~SuperBlock(){
@@ -178,6 +178,8 @@ public:
     bool allo_single_indirect(RawDisk &disk, u_int64_t &single_i, u_int64_t freeBlockNum) {
         if (single_i == 0){
             single_i = datablock_allocate_in_list(disk);
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(single_i, new_buffer, sizeof(new_buffer));
         }
         bool inSingle = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -197,6 +199,8 @@ public:
     bool allo_double_indirect(RawDisk &disk, u_int64_t &double_i, u_int64_t freeBlockNum) {
         if (double_i == 0){
             double_i = datablock_allocate_in_list(disk);
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(double_i, new_buffer, sizeof(new_buffer));
         }
         bool inDouble = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -217,6 +221,8 @@ public:
     bool allo_triple_indirect(RawDisk &disk, u_int64_t &triple_i, u_int64_t freeBlockNum) {
         if (triple_i == 0){
             triple_i = datablock_allocate_in_list(disk);
+            char new_buffer[IO_BLOCK_SIZE] = {0};
+            disk.rawdisk_write(triple_i, new_buffer, sizeof(new_buffer));
         }
         bool inTriple = false;
         char buffer[IO_BLOCK_SIZE] = {0};
@@ -270,18 +276,18 @@ public:
 
         // mark it alive in its bitmap
         char buffer[IO_BLOCK_SIZE] = {0};
-        bool notEmpty = false;
+        bool nowInList = false;
         disk.rawdisk_read(freeBlockHead, buffer, sizeof(buffer));
         for (int i = 8; i < 264; i++){
-            if(buffer[i] != 0){
-                notEmpty = true;
+            if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
+                nowInList = true;
             }
         }
         u_int64_t inBlockPos = (freeBlockNum-freeBlockHead)/IO_BLOCK_SIZE-1;
         buffer[8+inBlockPos/8] &= (-1)^(1<<(inBlockPos%8));
     
         // if its bitmap was 0, add it back to the list head
-        if(!notEmpty){
+        if(!nowInList){
             u_int64_t freeListHead = SuperBlock::getFreeListHead(disk);
             write_byte_at(freeListHead, 0, buffer);
             SuperBlock::writeFreeListHead(disk, freeBlockHead);
@@ -297,7 +303,7 @@ public:
         char buffer[IO_BLOCK_SIZE] = {0};
         int delpoint = -1;
         disk.rawdisk_read(single_i, buffer, sizeof(buffer));
-        for (int i=4088; i >= 0; i--){
+        for (int i=4088; i >= 0; i-=8){
             u_int64_t addr = read_byte_at(i, buffer);
             if(addr != 0){
                 freeBlockNum = addr;
