@@ -9,10 +9,8 @@ one inode equipped with one 512 bytes block
 *****************************************************/
 #define SECTOR_SIZE 512
 #define IO_BLOCK_SIZE 4096
-#define MAX_INODE 2048 
-// 524288
-#define MAX_BLOCKNUM 51200 
-// 1GB Disk: 2097152 = 196512 IO_BLOCK's. MAX_INODE*2 //62914560
+#define MAX_INODE 524288
+#define MAX_BLOCKNUM MAX_INODE*2 //62914560
 
 class SuperBlock{
 
@@ -172,8 +170,8 @@ public:
             }
         }
         if (!notFull){
+            printf("HEADER REMOVAL DETECTED %llu %llu\n", freeListHead, freeBlockNum);
             u_int64_t next_header = read_byte_at(0, buffer);
-            printf("HEADER MOVE (Cause: Alloc) %llu -> %llu (%llu)\n", freeListHead, next_header, freeBlockNum);
             SuperBlock::writeFreeListHead(disk, next_header);
         }
         return freeBlockNum;
@@ -278,26 +276,22 @@ public:
         // find the related 2048block head
         u_int64_t freeBlockHead = ((freeBlockNum/SECTOR_SIZE-MAX_INODE)/(8*2048)*(8*2048)+MAX_INODE)*SECTOR_SIZE;
 
+        // mark it alive in its bitmap
         char buffer[IO_BLOCK_SIZE] = {0};
         bool nowInList = false;
         disk.rawdisk_read(freeBlockHead, buffer, sizeof(buffer));
-
-        // mark it alive in its bitmap
-        u_int64_t inBlockPos = (freeBlockNum-freeBlockHead)/IO_BLOCK_SIZE-1;
-        buffer[8+inBlockPos/8] &= (-1)^(1<<(inBlockPos%8));
-
-        bool notEmpty = false;
         for (int i = 8; i < 264; i++){
             if((i < 263 && buffer[i] != -1) || (i == 263 && buffer[i] != 127)){
                 nowInList = true;
             }
         }
+        u_int64_t inBlockPos = (freeBlockNum-freeBlockHead)/IO_BLOCK_SIZE-1;
+        buffer[8+inBlockPos/8] &= (-1)^(1<<(inBlockPos%8));
     
         // if its bitmap was 0, add it back to the list head
         if(!nowInList){
             u_int64_t freeListHead = SuperBlock::getFreeListHead(disk);
             write_byte_at(freeListHead, 0, buffer);
-            printf("HEADER MOVE (Cause: Dealloc) %llu -> %llu\n", freeListHead, freeBlockHead);
             SuperBlock::writeFreeListHead(disk, freeBlockHead);
         }
         disk.rawdisk_write(freeBlockHead, buffer, sizeof(buffer));
@@ -318,7 +312,6 @@ public:
                 addr = 0;
                 write_byte_at(addr, i, buffer);
                 delpoint = i;
-                //printf("delpoint: %d\n", delpoint);
                 break;
             }
         }
@@ -392,10 +385,8 @@ public:
         freeBlockNum = deallo_triple_indirect(disk, triple_indirect);
         if(!freeBlockNum){
             freeBlockNum = deallo_double_indirect(disk, double_indirect);
-            //printf("In fs.h, Inode::datablock_deallocate: finished dealloc double indirect, got %lld\n", freeBlockNum);
             if(!freeBlockNum){
                 freeBlockNum = deallo_single_indirect(disk, single_indirect);
-                //printf("In fs.h, Inode::datablock_deallocate: finished dealloc single indirect, got %lld\n", freeBlockNum);
                 if(!freeBlockNum){
                     for(int i = 47; i>=0; i--)
                         if(blocks[i] != 0){
