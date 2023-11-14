@@ -13,6 +13,9 @@ add_executable(fischl
   # Header files
   lib/fischl.cpp
   lib/main.cpp
+  lib/fs/fs_data_types.cpp
+  lib/fs/fs_resize.cpp
+  lib/fs/fs.cpp
 
 )
 
