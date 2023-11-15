@@ -47,8 +47,8 @@ int Fs::save_free_list_head(u_int64_t new_free_list_head) {
   int err;
   superblock.free_list_head = new_free_list_head;
   if ((err = fs->store_superblock()) < 0) {
-      superblock.free_list_head = temp;
-      return err;
+    superblock.free_list_head = temp;
+    return err;
   }
   return 0;
 }
@@ -57,8 +57,8 @@ int Fs::save_inode_list_head(u_int64_t new_inode_list_head) {
   int err;
   superblock.inode_list_head = new_inode_list_head;
   if ((err = fs->store_superblock()) < 0) {
-      superblock.inode_list_head = temp;
-      return err;
+    superblock.inode_list_head = temp;
+    return err;
   }
   return 0;
 }
@@ -70,14 +70,15 @@ int Fs::load_inode(INode_Data *inode_data) {
   u_int64_t block_num = inode_allocator.get_block_num(inode_data->inode_num);
   if (block_num == 0)
     return -1;
-  u_int64_t block_offset = inode_allocator.get_block_offset(inode_data->inode_num);
+  u_int64_t block_offset =
+      inode_allocator.get_block_offset(inode_data->inode_num);
 
   if ((err = disk->read_block(block_num, buf)) < 0)
     return err;
 
   inode_data->deserialize(&buf[block_offset]);
 
-      return 0;
+  return 0;
 }
 int Fs::save_inode(INode_Data *inode_data) {
   char buf[BLOCK_SIZE];
@@ -86,14 +87,16 @@ int Fs::save_inode(INode_Data *inode_data) {
   u_int64_t block_num = inode_allocator.get_block_num(inode_data->inode_num);
   if (block_num == 0)
     return -1;
-  u_int64_t block_offset = inode_allocator.get_block_offset(inode_data->inode_num);
+  u_int64_t block_offset =
+      inode_allocator.get_block_offset(inode_data->inode_num);
 
   if ((err = disk->read_block(block_num, buf)) < 0)
     return err;
 
   inode_data->serialize(&buf[block_offset]);
 
-      if ((err = disk->write_block(block_num, buf)) < 0) return err;
+  if ((err = disk->write_block(block_num, buf)) < 0)
+    return err;
 
   return 0;
 }

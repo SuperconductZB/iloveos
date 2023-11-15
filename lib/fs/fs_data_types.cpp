@@ -1,15 +1,13 @@
 #include "fs.hpp"
 
-template <typename T> T write_int(T num, char buf[])
-{
+template <typename T> T write_int(T num, char buf[]) {
   size_t i = 0;
   for (; i < sizeof(T); ++i)
     buf[i] = (char)(num >> (i * 8));
   return i;
 }
 
-template <typename T> T read_int(T *num, char buf[])
-{
+template <typename T> T read_int(T *num, char buf[]) {
   size_t i = 0;
   T temp = 0;
   for (; i < sizeof(T); ++i) {

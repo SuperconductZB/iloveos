@@ -107,10 +107,9 @@ int DataBlock_Allocator_Bitmap::free_datablock(u_int64_t block_num) {
   if ((err = disk->write_block(bitmap_block_num, bitmap.buf)) < 0)
     return err;
 
-  if (update_freelist) {
+  if (update_freelist)
     if ((err = fs->save_free_list_head(bitmap_block_num)) < 0)
       return err;
-  }
 
   return 0;
 
@@ -132,6 +131,6 @@ int DataBlock_Allocator_Bitmap::format() {
   if ((err = disk->write_block(i, buf)) < 0)
     return err;
   if ((err = fs->save_free_list_head(block_segment_start)) < 0)
-      return err;
+    return err;
   return 0;
 }
