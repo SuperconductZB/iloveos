@@ -9,6 +9,10 @@ size_t write_u64(u_int64_t num, char buf[]);
 
 size_t read_u64(u_int64_t *num, char buf[]);
 
+size_t write_u32(u_int32_t num, char buf[]);
+
+size_t read_u32(u_int32_t *num, char buf[]);
+
 class SuperBlock_Data {
   u_int64_t free_list_head;
   u_int64_t inode_list_head;
@@ -20,13 +24,15 @@ class SuperBlock_Data {
 class INode_Data {
   u_int64_t inode_num;
 
-#define NUMBER_OF_METADATA_BYTES (4 * sizeof(u_int64_t) + sizeof(u_int32_t))
+#define NUMBER_OF_METADATA_BYTES                                               \
+  (4 * sizeof(u_int64_t) + (2 * sizeof(u_int32_t)))
   struct INode_MetaData {
     u_int64_t uid;
     u_int64_t gid;
     u_int64_t permissions;
     u_int64_t size; // not yet implemented
     u_int32_t reference_count;
+    u_int32_t flags;
   } metadata;
   size_t serialize_metadata(char buf[]);
   size_t deserialize_metadata(char buf[]);

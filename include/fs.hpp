@@ -24,10 +24,13 @@ public:
   DataBlock_Allocator datablock_allocator;
 
   int load_superblock();
-  int store_superblock();
+  int save_superblock();
+
+  int save_free_list_head(u_int64_t new_free_list_head);
+  int save_inode_list_head(u_int64_t new_inode_list_head);
 
   int load_inode(INode_Data *inode_data);
-  int store_inode(INode_Data *inode_data);
+  int save_inode(INode_Data *inode_data);
 };
 
 #endif

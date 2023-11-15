@@ -1,20 +1,39 @@
 #include "fs.hpp"
 
-size_t write_u64(u_int64_t num, char buf[]) {
+template <typename T> T write_int(T num, char buf[])
+{
   size_t i = 0;
-  for (; i < 8; ++i)
+  for (; i < sizeof(T); ++i)
     buf[i] = (char)(num >> (i * 8));
   return i;
 }
 
-size_t read_u64(u_int64_t *num, char buf[]) {
+template <typename T> T read_int(T *num, char buf[])
+{
   size_t i = 0;
-  (*num) = 0;
-  for (; i < 8; ++i) {
-    (*num) <<= 8;
-    (*num) |= ((u_int64_t)buf[i]) & 0xFF;
+  T temp = 0;
+  for (; i < sizeof(T); ++i) {
+    temp <<= 8;
+    temp |= ((T)buf[i]) & 0xFF;
   }
+  (*num) = temp;
   return i;
+}
+
+size_t write_u64(u_int64_t num, char buf[]) {
+  return write_int<u_int64_t>(num, buf);
+}
+
+size_t read_u64(u_int64_t *num, char buf[]) {
+  return read_int<u_int64_t>(num, buf);
+}
+
+size_t write_u32(u_int32_t num, char buf[]) {
+  return write_int<u_int32_t>(num, buf);
+}
+
+size_t read_u32(u_int32_t *num, char buf[]) {
+  return read_int<u_int32_t>(num, buf);
 }
 
 SuperBlock_Data::SuperBlock_Data() {
@@ -55,7 +74,8 @@ size_t INode_Data::serialize_metadata(char buf[]) {
   i += write_u64(metadata.gid, &buf[i]);
   i += write_u64(metadata.permissions, &buf[i]);
   i += write_u64(metadata.size, &buf[i]);
-  i += write_u64(metadata.reference_count, &buf[i]);
+  i += write_u32(metadata.reference_count, &buf[i]);
+  i += write_u32(metadata.flags, &buf[i]);
   return i;
 }
 
@@ -65,7 +85,8 @@ size_t INode_Data::deserialize_metadata(char buf[]) {
   i += read_u64(&metadata.gid, &buf[i]);
   i += read_u64(&metadata.permissions, &buf[i]);
   i += read_u64(&metadata.size, &buf[i]);
-  i += read_u64(&metadata.reference_count, &buf[i]);
+  i += read_u32(&metadata.reference_count, &buf[i]);
+  i += read_u32(&metadata.flags, &buf[i]);
   return i;
 }
 

@@ -25,6 +25,7 @@ public:
 protected:
   Fs *fs;
   u_int64_t block_segment_start, block_segment_end;
+  u_int64_t max_num_inodes;
 };
 
 class INode_Allocator_Freelist : INode_Allocator {
