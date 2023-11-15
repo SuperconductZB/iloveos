@@ -1,6 +1,8 @@
 #ifndef DATABLOCK_ALLOCATOR_HPP
 #define DATABLOCK_ALLOCATOR_HPP
 
+#include "fs_constants.hpp"
+
 class Fs;
 
 class DataBlock_Allocator {
@@ -18,10 +20,11 @@ protected:
   u_int64_t block_segment_start, block_segment_end;
 };
 
-class DataBlock_Allocator_Bitmap : DataBlock_Allocator {
-  using DataBlock_Allocator::DataBlock_Allocator;
-
-  const int DATABLOCKS_PER_BITMAP_BLOCK = 255;
+class DataBlock_Allocator_Bitmap : public DataBlock_Allocator {
+public:
+  DataBlock_Allocator_Bitmap(Fs *fs, u_int64_t block_segment_start,
+                             u_int64_t block_segment_end)
+      : DataBlock_Allocator(fs, block_segment_start, block_segment_end) {}
 
   int new_datablock(u_int64_t *block_num) override;
   int free_datablock(u_int64_t block_num) override;

@@ -10,10 +10,8 @@ template <typename T> T write_int(T num, char buf[]) {
 template <typename T> T read_int(T *num, char buf[]) {
   size_t i = 0;
   T temp = 0;
-  for (; i < sizeof(T); ++i) {
-    temp <<= 8;
-    temp |= ((T)buf[i]) & 0xFF;
-  }
+  for (; i < sizeof(T); ++i)
+    temp |= (((T)buf[i]) & 0xFF) << (8 * i);
   (*num) = temp;
   return i;
 }
@@ -39,21 +37,19 @@ SuperBlock_Data::SuperBlock_Data() {
   inode_list_head = 0;
 }
 
-SuperBlock_Data::serialize(char buf[]) {
+void SuperBlock_Data::serialize(char buf[]) {
   size_t i = 0;
   i += write_u64(free_list_head, &buf[i]);
   i += write_u64(inode_list_head, &buf[i]);
 }
 
-SuperBlock_Data::deserialize(char buf[]) {
+void SuperBlock_Data::deserialize(char buf[]) {
   size_t i = 0;
   i += read_u64(&free_list_head, &buf[i]);
   i += read_u64(&inode_list_head, &buf[i]);
 }
 
-INode_Data::INode_Data(u_int64_t inode_num) {
-  inode_num = inode_num;
-
+INode_Data::INode_Data(u_int64_t inode_num) : inode_num(inode_num) {
   metadata.uid = -1;
   metadata.gid = -1;
   metadata.permissions = -1;

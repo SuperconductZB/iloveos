@@ -1,9 +1,7 @@
 #ifndef FS_DATA_TYPES_HPP
 #define FS_DATA_TYPES_HPP
 
-#include "rawdisk.hpp"
-
-#define INODE_SIZE 512
+#include "fs_constants.hpp"
 
 size_t write_u64(u_int64_t num, char buf[]);
 
@@ -14,6 +12,7 @@ size_t write_u32(u_int32_t num, char buf[]);
 size_t read_u32(u_int32_t *num, char buf[]);
 
 class SuperBlock_Data {
+public:
   u_int64_t free_list_head;
   u_int64_t inode_list_head;
   SuperBlock_Data();
@@ -22,6 +21,7 @@ class SuperBlock_Data {
 };
 
 class INode_Data {
+public:
   u_int64_t inode_num;
 
 #define NUMBER_OF_METADATA_BYTES                                               \
@@ -37,13 +37,13 @@ class INode_Data {
   size_t serialize_metadata(char buf[]);
   size_t deserialize_metadata(char buf[]);
 
-  const size_t NUMBER_OF_DIRECT_BLOCKS =
-      ((INODE_SIZE - NUMBER_OF_METADATA_BYTES) / sizeof(u_int64_t)) - 3;
+#define NUMBER_OF_DIRECT_BLOCKS                                                \
+  (((INODE_SIZE - NUMBER_OF_METADATA_BYTES) / sizeof(u_int64_t)) - 3)
 
   u_int64_t single_indirect_block, double_indirect_block, triple_indirect_block;
   u_int64_t direct_blocks[NUMBER_OF_DIRECT_BLOCKS];
 
-  INode_Data(u_int64_t inode_num);
+  INode_Data(u_int64_t inode_num = 0xFFFFFFFFFFFFFFFF);
   void serialize(char buf[]);
   void deserialize(char buf[]);
 };
