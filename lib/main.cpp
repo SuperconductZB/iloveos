@@ -13,15 +13,15 @@ int main() {
   disk->print_block(0);
   disk->print_block(1);
   INode_Data inode_data = INode_Data();
-  fs->inode_allocator->new_inode(1, 2, 3, &inode_data);
+  fs->inode_manager->new_inode(1, 2, 3, &inode_data);
   int err;
   for (int i = 0; i < 56 + 512 + 4; ++i)
     err = fs->allocate_datablock(&inode_data);
 
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 5; ++i)
     printf("%d\n", err = fs->deallocate_datablock(&inode_data));
 
-  fs->save_inode(&inode_data);
+  fs->inode_manager->save_inode(&inode_data);
 
   disk->print_block(0);
   disk->print_block(1);

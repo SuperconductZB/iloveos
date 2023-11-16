@@ -1,13 +1,13 @@
-#ifndef DATABLOCK_ALLOCATOR_HPP
-#define DATABLOCK_ALLOCATOR_HPP
+#ifndef DATABLOCK_MANAGER_HPP
+#define DATABLOCK_MANAGER_HPP
 
 #include "fs_constants.hpp"
 
 class Fs;
 
-class DataBlock_Allocator {
+class DataBlock_Manager {
 public:
-  DataBlock_Allocator(Fs *fs, u_int64_t block_segment_start,
+  DataBlock_Manager(Fs *fs, u_int64_t block_segment_start,
                       u_int64_t block_segment_end);
 
   virtual int new_datablock(u_int64_t *block_num) = 0;
@@ -20,11 +20,11 @@ protected:
   u_int64_t block_segment_start, block_segment_end;
 };
 
-class DataBlock_Allocator_Bitmap : public DataBlock_Allocator {
+class DataBlock_Manager_Bitmap : public DataBlock_Manager {
 public:
-  DataBlock_Allocator_Bitmap(Fs *fs, u_int64_t block_segment_start,
+  DataBlock_Manager_Bitmap(Fs *fs, u_int64_t block_segment_start,
                              u_int64_t block_segment_end)
-      : DataBlock_Allocator(fs, block_segment_start, block_segment_end) {}
+      : DataBlock_Manager(fs, block_segment_start, block_segment_end) {}
 
   int new_datablock(u_int64_t *block_num) override;
   int free_datablock(u_int64_t block_num) override;

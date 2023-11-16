@@ -1,23 +1,59 @@
 #include "fs.hpp"
 
-INode_Allocator::INode_Allocator(Fs *fs, u_int64_t block_segment_start,
+INode_Manager::INode_Manager(Fs *fs, u_int64_t block_segment_start,
                                  u_int64_t block_segment_end)
     : fs(fs), block_segment_start(block_segment_start),
       block_segment_end(block_segment_end) {
   max_num_inodes = (block_segment_end - block_segment_start) * INODES_PER_BLOCK;
 }
 
-u_int64_t INode_Allocator::get_block_num(u_int64_t inode_num) {
+u_int64_t INode_Manager::get_block_num(u_int64_t inode_num) {
   u_int64_t block_num = block_segment_start + (inode_num / INODES_PER_BLOCK);
   if (block_num >= block_segment_end)
     return 0;
   return block_num;
 }
-u_int64_t INode_Allocator::get_block_offset(u_int64_t inode_num) {
+u_int64_t INode_Manager::get_block_offset(u_int64_t inode_num) {
   return (inode_num % INODES_PER_BLOCK) * INODE_SIZE;
 }
 
-int INode_Allocator_Freelist::new_inode(u_int64_t uid, u_int64_t gid,
+int INode_Manager::load_inode(INode_Data *inode_data) {
+  char buf[IO_BLOCK_SIZE];
+  int err;
+
+  u_int64_t block_num = get_block_num(inode_data->inode_num);
+  if (block_num == 0)
+    return -1;
+  u_int64_t block_offset = get_block_offset(inode_data->inode_num);
+
+  if ((err = fs->disk->read_block(block_num, buf)) < 0)
+    return err;
+
+  inode_data->deserialize(&buf[block_offset]);
+
+  return 0;
+}
+int INode_Manager::save_inode(INode_Data *inode_data) {
+  char buf[IO_BLOCK_SIZE];
+  int err;
+
+  u_int64_t block_num = get_block_num(inode_data->inode_num);
+  if (block_num == 0)
+    return -1;
+  u_int64_t block_offset = get_block_offset(inode_data->inode_num);
+
+  if ((err = fs->disk->read_block(block_num, buf)) < 0)
+    return err;
+
+  inode_data->serialize(&buf[block_offset]);
+
+  if ((err = fs->disk->write_block(block_num, buf)) < 0)
+    return err;
+
+  return 0;
+}
+
+int INode_Manager_Freelist::new_inode(u_int64_t uid, u_int64_t gid,
                                         u_int64_t permissions,
                                         INode_Data *inode_data) {
   char buf[IO_BLOCK_SIZE];
@@ -47,14 +83,14 @@ int INode_Allocator_Freelist::new_inode(u_int64_t uid, u_int64_t gid,
   inode_data->metadata.permissions = permissions;
 
   // It is debatable if this function should do this:
-  if ((err = fs->save_inode(inode_data)) < 0) {
+  if ((err = save_inode(inode_data)) < 0) {
     inode_data->inode_num = 0xFFFFFFFFFFFFFFFF;
     return err;
   }
 
   return 0;
 }
-int INode_Allocator_Freelist::free_inode(INode_Data *inode_data) {
+int INode_Manager_Freelist::free_inode(INode_Data *inode_data) {
   char buf[IO_BLOCK_SIZE];
   int err;
 
@@ -78,7 +114,7 @@ int INode_Allocator_Freelist::free_inode(INode_Data *inode_data) {
   return 0;
 }
 
-int INode_Allocator_Freelist::format() {
+int INode_Manager_Freelist::format() {
   char buf[IO_BLOCK_SIZE];
   int err;
   u_int64_t next_inode_num = 1;
@@ -92,3 +128,5 @@ int INode_Allocator_Freelist::format() {
     return err;
   return 0;
 }
+
+

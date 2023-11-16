@@ -1,6 +1,6 @@
 #include "fs.hpp"
 
-DataBlock_Allocator::DataBlock_Allocator(Fs *fs, u_int64_t block_segment_start,
+DataBlock_Manager::DataBlock_Manager(Fs *fs, u_int64_t block_segment_start,
                                          u_int64_t block_segment_end)
     : fs(fs), block_segment_start(block_segment_start),
       block_segment_end(block_segment_end) {}
@@ -45,7 +45,7 @@ public:
   }
 };
 
-int DataBlock_Allocator_Bitmap::new_datablock(u_int64_t *block_num) {
+int DataBlock_Manager_Bitmap::new_datablock(u_int64_t *block_num) {
   int err;
   BitmapBlock_Data bitmap = BitmapBlock_Data(DATABLOCKS_PER_BITMAP_BLOCK);
   u_int64_t bitmap_block_num = fs->superblock.free_list_head;
@@ -83,7 +83,7 @@ int DataBlock_Allocator_Bitmap::new_datablock(u_int64_t *block_num) {
   return 0;
 }
 
-int DataBlock_Allocator_Bitmap::free_datablock(u_int64_t block_num) {
+int DataBlock_Manager_Bitmap::free_datablock(u_int64_t block_num) {
   int err;
   BitmapBlock_Data bitmap = BitmapBlock_Data(DATABLOCKS_PER_BITMAP_BLOCK);
   const u_int64_t bitmap_region_size = DATABLOCKS_PER_BITMAP_BLOCK + 1;
@@ -117,7 +117,7 @@ int DataBlock_Allocator_Bitmap::free_datablock(u_int64_t block_num) {
   // potentially like 256 times slower throughput
 }
 
-int DataBlock_Allocator_Bitmap::format() {
+int DataBlock_Manager_Bitmap::format() {
   const u_int64_t bitmap_region_size = DATABLOCKS_PER_BITMAP_BLOCK + 1;
   char buf[IO_BLOCK_SIZE] = {0};
   int err;
