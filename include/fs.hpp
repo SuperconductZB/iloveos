@@ -12,8 +12,8 @@ public:
   Fs(RawDisk *disk);
   ~Fs();
 
-  int allocate_datablock(INode_Data *inode_data);
-  int deallocate_datablock(INode_Data *inode_data);
+  int allocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num);
+  int deallocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num);
 
   int format();
 
@@ -29,8 +29,8 @@ public:
   int save_free_list_head(u_int64_t new_free_list_head);
   int save_inode_list_head(u_int64_t new_inode_list_head);
 
-  int allocate_indirect(u_int64_t *storage, int n);
-  int deallocate_indirect(u_int64_t *storage, int n);
+  int allocate_indirect(u_int64_t *storage, int n, u_int64_t *datablock_num);
+  int deallocate_indirect(u_int64_t *storage, int n, u_int64_t *datablock_num);
 };
 
 #endif

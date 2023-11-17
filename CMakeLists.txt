@@ -21,5 +21,5 @@ add_executable(fischl
 
 )
 
-#enable_testing()
-#add_subdirectory(test)
+enable_testing()
+add_subdirectory(test)

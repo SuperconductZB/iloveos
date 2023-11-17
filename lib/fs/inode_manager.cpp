@@ -1,20 +1,21 @@
 #include "fs.hpp"
 
 INode_Manager::INode_Manager(Fs *fs, u_int64_t block_segment_start,
-                                 u_int64_t block_segment_end)
+                             u_int64_t block_segment_end)
     : fs(fs), block_segment_start(block_segment_start),
       block_segment_end(block_segment_end) {
   max_num_inodes = (block_segment_end - block_segment_start) * INODES_PER_BLOCK;
 }
 
 u_int64_t INode_Manager::get_block_num(u_int64_t inode_num) {
-  u_int64_t block_num = block_segment_start + (inode_num / INODES_PER_BLOCK);
-  if (block_num >= block_segment_end)
+  if (inode_num > max_num_inodes || inode_num == 0)
     return 0;
+  u_int64_t block_num =
+      block_segment_start + ((inode_num - 1) / INODES_PER_BLOCK);
   return block_num;
 }
 u_int64_t INode_Manager::get_block_offset(u_int64_t inode_num) {
-  return (inode_num % INODES_PER_BLOCK) * INODE_SIZE;
+  return ((inode_num - 1) % INODES_PER_BLOCK) * INODE_SIZE;
 }
 
 int INode_Manager::load_inode(INode_Data *inode_data) {
@@ -54,8 +55,8 @@ int INode_Manager::save_inode(INode_Data *inode_data) {
 }
 
 int INode_Manager_Freelist::new_inode(u_int64_t uid, u_int64_t gid,
-                                        u_int64_t permissions,
-                                        INode_Data *inode_data) {
+                                      u_int64_t permissions,
+                                      INode_Data *inode_data) {
   char buf[IO_BLOCK_SIZE];
   int err;
   u_int64_t inode_num = fs->superblock.inode_list_head;
@@ -117,16 +118,17 @@ int INode_Manager_Freelist::free_inode(INode_Data *inode_data) {
 int INode_Manager_Freelist::format() {
   char buf[IO_BLOCK_SIZE];
   int err;
-  u_int64_t next_inode_num = 1;
+  u_int64_t next_inode_num = 2;
   for (u_int64_t i = block_segment_start; i < block_segment_end; ++i) {
-    for (int j = 0; j < INODES_PER_BLOCK; ++next_inode_num, ++j)
+    for (int j = 0; j < INODES_PER_BLOCK; ++next_inode_num, ++j) {
+      if (next_inode_num > max_num_inodes)
+        next_inode_num = 0;
       write_u64(next_inode_num, &buf[j * INODE_SIZE]);
+    }
     if ((err = fs->disk->write_block(i, buf)) < 0)
       return err;
   }
-  if ((err = fs->save_inode_list_head(0)) < 0)
+  if ((err = fs->save_inode_list_head(1)) < 0)
     return err;
   return 0;
 }
-
-

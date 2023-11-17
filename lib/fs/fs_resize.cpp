@@ -1,25 +1,27 @@
 #include "fs.hpp"
 
-int Fs::allocate_datablock(INode_Data *inode_data) {
+int Fs::allocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num) {
   int result;
 
-  for (size_t i = 0; i < NUMBER_OF_DIRECT_BLOCKS; ++i)
-    if (inode_data->direct_blocks[i] == 0) {
-      if ((result = datablock_manager->new_datablock(
-               &(inode_data->direct_blocks[i]))) < 0)
-        return result;
-      return 0;
-    }
+  for (size_t i = 0; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {
+    result =
+        allocate_indirect(&(inode_data->direct_blocks[i]), 0, datablock_num);
+    if (result <= 0)
+      return result;
+  }
 
-  result = allocate_indirect(&(inode_data->single_indirect_block), 1);
+  result =
+      allocate_indirect(&(inode_data->single_indirect_block), 1, datablock_num);
   if (result <= 0)
     return result;
 
-  result = allocate_indirect(&(inode_data->double_indirect_block), 2);
+  result =
+      allocate_indirect(&(inode_data->double_indirect_block), 2, datablock_num);
   if (result <= 0)
     return result;
 
-  result = allocate_indirect(&(inode_data->triple_indirect_block), 3);
+  result =
+      allocate_indirect(&(inode_data->triple_indirect_block), 3, datablock_num);
   if (result <= 0)
     return result;
 
@@ -28,15 +30,17 @@ int Fs::allocate_datablock(INode_Data *inode_data) {
 
 // This can simply be made non recursive by copy pasting - it is just written
 // this way as a proof of concept
-int Fs::allocate_indirect(u_int64_t *storage, int n) {
+int Fs::allocate_indirect(u_int64_t *storage, int n, u_int64_t *datablock_num) {
   char buf[IO_BLOCK_SIZE];
   int result;
 
   if ((*storage) == 0) {
     if ((result = datablock_manager->new_datablock(storage)) < 0)
       return result;
-    if (n == 0)
+    if (n == 0) {
+      (*datablock_num) = (*storage);
       return 0;
+    }
   }
 
   if (n == 0)
@@ -49,7 +53,7 @@ int Fs::allocate_indirect(u_int64_t *storage, int n) {
 
   for (size_t i = 0; i < IO_BLOCK_SIZE; i += sizeof(u_int64_t)) {
     read_u64(&temp, &buf[i]);
-    result = allocate_indirect(&temp, n - 1);
+    result = allocate_indirect(&temp, n - 1, datablock_num);
     if (result < 0)
       return result;
     if (result == 0) {
@@ -63,34 +67,36 @@ int Fs::allocate_indirect(u_int64_t *storage, int n) {
   return 1;
 }
 
-int Fs::deallocate_datablock(INode_Data *inode_data) {
+int Fs::deallocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num) {
   int result;
 
-  result = deallocate_indirect(&(inode_data->triple_indirect_block), 3);
+  result = deallocate_indirect(&(inode_data->triple_indirect_block), 3,
+                               datablock_num);
   if (result <= 0)
     return result;
 
-  result = deallocate_indirect(&(inode_data->double_indirect_block), 2);
+  result = deallocate_indirect(&(inode_data->double_indirect_block), 2,
+                               datablock_num);
   if (result <= 0)
     return result;
 
-  result = deallocate_indirect(&(inode_data->single_indirect_block), 1);
+  result = deallocate_indirect(&(inode_data->single_indirect_block), 1,
+                               datablock_num);
   if (result <= 0)
     return result;
 
-  for (size_t i = NUMBER_OF_DIRECT_BLOCKS - 1; i >= 0; --i)
-    if (inode_data->direct_blocks[i] != 0) {
-      if ((result = datablock_manager->free_datablock(
-               inode_data->direct_blocks[i])) < 0)
-        return result;
-      inode_data->direct_blocks[i] = 0;
-      return 0;
-    }
+  for (size_t i = NUMBER_OF_DIRECT_BLOCKS - 1; i >= 0; --i) {
+    result =
+        deallocate_indirect(&(inode_data->direct_blocks[i]), 0, datablock_num);
+    if (result <= 0)
+      return result;
+  }
 
   return -1;
 }
 
-int Fs::deallocate_indirect(u_int64_t *storage, int n) {
+int Fs::deallocate_indirect(u_int64_t *storage, int n,
+                            u_int64_t *datablock_num) {
   char buf[IO_BLOCK_SIZE];
   int result;
 
@@ -98,8 +104,10 @@ int Fs::deallocate_indirect(u_int64_t *storage, int n) {
     return 1;
 
   if (n == 0) {
+    u_int64_t temp_datablock_num = (*storage);
     if ((result = datablock_manager->free_datablock(*storage)) < 0)
       return result;
+    (*datablock_num) = temp_datablock_num;
     (*storage) = 0;
     return 0;
   }
@@ -112,7 +120,7 @@ int Fs::deallocate_indirect(u_int64_t *storage, int n) {
   for (size_t i = IO_BLOCK_SIZE - sizeof(u_int64_t); i >= 0;
        i -= sizeof(u_int64_t)) {
     read_u64(&temp, &buf[i]);
-    result = deallocate_indirect(&temp, n - 1);
+    result = deallocate_indirect(&temp, n - 1, datablock_num);
     if (result < 0)
       return result;
     if (result == 0) {

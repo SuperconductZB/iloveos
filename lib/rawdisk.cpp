@@ -12,7 +12,9 @@ void RawDisk::print_block(u_int64_t block_number) {
 
   printf("\nBlock %llu:\n", block_number);
   for (int i = 0; i < IO_BLOCK_SIZE; i += sizeof(u_int64_t)) {
-    read_u64(&num, &buf[i]);
+    num = 0;
+    for (int j = 0; j < 8; j++)
+      num |= ((u_int64_t)(unsigned char)buf[i + j]) << (8 * j);
     printf("%llu ", num);
     if ((i / sizeof(u_int64_t)) % nums_per_line == nums_per_line - 1)
       printf("\n");
