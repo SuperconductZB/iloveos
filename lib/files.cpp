@@ -22,8 +22,7 @@ struct DirectoryEntry {
 };
 
 FilesOperation::FilesOperation(RawDisk& disk_): disk(disk_) {
-    disk = disk_;
-    inop.initialize(disk_);
+    inop.initialize(disk);
 }
 
 int FilesOperation::read_datablock(INode& inode, u_int64_t index, char* buffer) {
