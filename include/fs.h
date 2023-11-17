@@ -57,16 +57,16 @@ public:
 };
 
 class INode{
+    public:
     // direct datablocks 
     u_int64_t blocks[48];
     // indirect address
     u_int64_t single_indirect, double_indirect, triple_indirect;
     // other 
-
     u_int64_t uid;
     u_int64_t gid;
     u_int64_t permissions;
-    u_int64_t size;
+    u_int64_t size; // Number of datablocks
     u_int64_t block_number;
 
 public:

@@ -13,6 +13,7 @@ add_executable(fischl
   # Header files
   lib/fischl.cpp
   lib/main.cpp
+  lib/files.cpp
 
 )
 
