@@ -1,7 +1,13 @@
+//#include "fuse.h" add this when layer3
 #include "files.h"
 #include <string.h>
 #include <sstream>
 
+/*********************************************************************
+                Directory Entry definition and function
+
+
+*********************************************************************/
 struct DirectoryEntry {
     u_int64_t inode_number;
     char file_name[56];
@@ -20,6 +26,21 @@ struct DirectoryEntry {
         strcpy(file_name, buffer+8);
     }
 };
+//Directory collection
+typedef struct {
+    //DirectoryEntry entries[MAX_ENTRIES]; with tree structure
+    unsigned int num_entries;
+} Directory;
+/*
+ *	fishcl_add_entry()
+ *
+ * adds a file entry to the specified directory, using the same
+ * semantics as fishcl_find_entry(). It returns NULL if it failed.
+ *
+ */
+static int fishcl_add_entry(Directory *dir, unsigned int inode_number, const char *name){
+
+}
 
 FilesOperation::FilesOperation(RawDisk& disk_): disk(disk_) {
     inop.initialize(disk);
@@ -155,46 +176,48 @@ u_int64_t FilesOperation::namei(const char* path) {
     // path = "/notnonemptydir/foo" should raise error
 }
 
+/**/
 u_int64_t FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
+    //check path
     char *pathdup = strdup(path);
-    char *ptr = strrchr(pathdup, '/');
-    char *newfilename = ptr+1;
-    char *prefix = new char[ptr-pathdup+1];
-    for(int i=0;i<ptr-pathdup;i++){
-        prefix[i] = pathdup[i];
-    }
-    prefix[ptr-pathdup] = '\0';
-    u_int64_t parent_inode_number = namei(prefix);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newDirname = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+
+    u_int64_t parent_inode_number = namei(ParentPath);
     if (parent_inode_number == (u_int64_t)-1) {
-        printf("fischl_mkdir failed because namei failed to find inode for %s\n", prefix);
+        printf("fischl_mkdir failed because namei failed to find inode for %s\n", ParentPath);
         delete pathdup;
-        delete [] prefix;
         return -1;
     }
-    u_int64_t ret = mkfile(parent_inode_number, newfilename, 1);
+    //make new inode
+    u_int64_t ret = mkfile(parent_inode_number, newDirname, 1);/* mode|S_IFDIR if need to call with dir*/
     delete pathdup;
-    delete [] prefix;
     return ret;
+    //create with struct inode *__fishcl_new_inode(, that is change mkfile to fishcl_new_inode
+
+    //after new_inode(mkfile), go to fischl_add_entry record
+
+    
 }
 
 u_int64_t FilesOperation::fischl_mknod(const char* path, mode_t mode) {
+    //check path
     char *pathdup = strdup(path);
-    char *ptr = strrchr(pathdup, '/');
-    char *newfilename = ptr+1;
-    char *prefix = new char[ptr-pathdup+1];
-    for(int i=0;i<ptr-pathdup;i++){
-        prefix[i] = pathdup[i];
-    }
-    prefix[ptr-pathdup] = '\0';
-    u_int64_t parent_inode_number = namei(prefix);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+
+    u_int64_t parent_inode_number = namei(ParentPath);
     if (parent_inode_number == (u_int64_t)-1) {
-        printf("fischl_mknod failed because namei failed to find inode for %s", prefix);
+        printf("fischl_mkdir failed because namei failed to find inode for %s\n", ParentPath);
         delete pathdup;
-        delete [] prefix;
         return -1;
     }
-    u_int64_t ret = mkfile(parent_inode_number, newfilename, 0);
+    //make new inode
+    u_int64_t ret = mkfile(parent_inode_number, newFilename, 0);
     delete pathdup;
-    delete [] prefix;
     return ret;
 }
