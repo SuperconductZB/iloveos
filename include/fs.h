@@ -65,7 +65,7 @@ class INode{
     // other 
     u_int64_t uid;
     u_int64_t gid;
-    u_int64_t permissions;
+    u_int64_t permissions;//will respond to mode_t mode <File type> <owner permission> <group permission> <other permission>; this is octal format
     u_int64_t size; // Number of datablocks
     u_int64_t block_number;
 

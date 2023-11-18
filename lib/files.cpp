@@ -89,11 +89,11 @@ void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     root_inode = inop.inode_allocate(disk);
     printf("Info: root inode number: %llu\n", root_inode);
-    INode *get_inode = new_inode(root_inode, 1);
+    INode *get_inode = new_inode(root_inode, S_IFDIR);
     delete get_inode;
 }
 
-u_int64_t FilesOperation::mkfile(u_int64_t parent_inode_number, const char* name, u_int64_t permissions) {
+u_int64_t FilesOperation::create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode) {
     // trys to create a file under parent directory
     if (strlen(name)>=56) {
         perror("Name too long, cannot create file or directory");
@@ -101,7 +101,7 @@ u_int64_t FilesOperation::mkfile(u_int64_t parent_inode_number, const char* name
     }
     INode inode;
     inode.inode_construct(parent_inode_number, disk);
-    if (inode.permissions != 1) {
+    if ((inode.permissions & S_IFMT) != S_IFDIR) {
         printf("Parent Inode is not a directory\n");
         return -1;
     }
@@ -130,7 +130,7 @@ u_int64_t FilesOperation::mkfile(u_int64_t parent_inode_number, const char* name
     inode.inode_save(disk);
 
     // initialize new file
-    INode *get_inode = new_inode(new_inode_number, permissions);
+    INode *get_inode = new_inode(new_inode_number, mode);
     delete get_inode;
     return new_inode_number;
 }
@@ -149,7 +149,7 @@ u_int64_t FilesOperation::namei(const char* path) {
 	while (std::getline(pathStream, new_name, '/')) {
 		INode inode;
         inode.inode_construct(current_inode, disk);
-        if (inode.permissions != 1 || inode.size == 0) {
+        if ((inode.permissions & S_IFMT) != S_IFDIR || inode.size == 0) {
             printf("namei: %s is not a non-empty directory\n", current_dirname.c_str());
             return -1;
         }
@@ -195,11 +195,9 @@ u_int64_t FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
         return -1;
     }
     //make new inode
-    u_int64_t ret = mkfile(parent_inode_number, newDirname, 1);/* mode|S_IFDIR if need to call with dir*/
+    u_int64_t ret = create_new_inode(parent_inode_number, newDirname, mode|S_IFDIR);//specify S_IFDIR as directory 
     delete pathdup;
     return ret;
-    //create with struct inode *__fishcl_new_inode(, that is change mkfile to fishcl_new_inode
-
     //after new_inode(mkfile), go to fischl_add_entry record
 
     
@@ -220,7 +218,7 @@ u_int64_t FilesOperation::fischl_mknod(const char* path, mode_t mode) {
         return -1;
     }
     //make new inode
-    u_int64_t ret = mkfile(parent_inode_number, newFilename, 0);
+    u_int64_t ret = create_new_inode(parent_inode_number, newFilename, mode);
     delete pathdup;
     return ret;
 }

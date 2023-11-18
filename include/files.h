@@ -11,7 +11,7 @@ class FilesOperation {
     int write_datablock(INode& inode, u_int64_t index, char* buffer);
     INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
     void initialize_rootinode();
-    u_int64_t mkfile(u_int64_t parent_inode_number, const char* name, u_int64_t permissions);
+    u_int64_t create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     u_int64_t namei(const char* path);
     u_int64_t fischl_mkdir(const char*, mode_t);
     u_int64_t fischl_mknod(const char*, mode_t);
