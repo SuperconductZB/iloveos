@@ -72,22 +72,25 @@ int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer)
     }
 }
 
-void FilesOperation::init_inode(u_int64_t inode_number, u_int64_t permissions) {
+INode* FilesOperation::new_inode(u_int64_t inode_number, u_int64_t permissions) {
     // zero out disk space of inode, because in memory inode is uninitialized by default
     char buffer[SECTOR_SIZE] = {0};
     disk.rawdisk_write(inode_number*SECTOR_SIZE, buffer, sizeof(buffer));
-    INode inode;
-    inode.inode_construct(inode_number, disk);
-    inode.block_number = inode_number;
-    inode.permissions = permissions;
-    inode.inode_save(disk);
+    INode *inode = new INode;
+    inode->inode_construct(inode_number, disk);
+    inode->block_number = inode_number;
+    inode->permissions = permissions;
+    inode->inode_save(disk);
+
+    return inode;
 }
 
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     root_inode = inop.inode_allocate(disk);
     printf("Info: root inode number: %llu\n", root_inode);
-    init_inode(root_inode, 1);
+    INode *get_inode = new_inode(root_inode, 1);
+    delete get_inode;
 }
 
 u_int64_t FilesOperation::mkfile(u_int64_t parent_inode_number, const char* name, u_int64_t permissions) {
@@ -127,8 +130,8 @@ u_int64_t FilesOperation::mkfile(u_int64_t parent_inode_number, const char* name
     inode.inode_save(disk);
 
     // initialize new file
-    init_inode(new_inode_number, permissions);
-
+    INode *get_inode = new_inode(new_inode_number, permissions);
+    delete get_inode;
     return new_inode_number;
 }
 

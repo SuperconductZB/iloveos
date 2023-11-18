@@ -9,7 +9,7 @@ class FilesOperation {
     FilesOperation(RawDisk&);
     int read_datablock(INode& inode, u_int64_t index, char* buffer);
     int write_datablock(INode& inode, u_int64_t index, char* buffer);
-    void init_inode(u_int64_t inode_number, u_int64_t permissions);
+    INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
     void initialize_rootinode();
     u_int64_t mkfile(u_int64_t parent_inode_number, const char* name, u_int64_t permissions);
     u_int64_t namei(const char* path);
