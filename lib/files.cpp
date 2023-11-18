@@ -46,17 +46,43 @@ FilesOperation::FilesOperation(RawDisk& disk_): disk(disk_) {
     inop.initialize(disk);
 }
 
+u_int64_t index_to_offset(disk& disk, u_int64_t index) {
+    if (index < 48) {
+        return inode.blocks[index];
+    } else if (index < 48 + 512){
+        char indirect_buffer[IO_BLOCK_SIZE] = {0};
+        disk.rawdisk_read(inode.single_indirect, indirect_buffer, IO_BLOCK_SIZE);
+        return INode::read_byte_at(8*(index-48), indirect_buffer);
+    } else if (index < 48 + 512 + 512*512) {
+        char indirect_buffer[IO_BLOCK_SIZE] = {0};
+        disk.rawdisk_read(inode.double_indirect, indirect_buffer, IO_BLOCK_SIZE);
+        u_int64_t offset = INode::read_byte_at(8*((index-48-512)/512), indirect_buffer);
+        disk.rawdisk_read(offset,indirect_buffer, IO_BLOCK_SIZE);
+        return INode::read_byte_at(8*((index-48-512)%512), indirect_buffer);
+    } else if (index < 48 + 512 + 512*512 + 512*512*512){
+        char indirect_buffer[IO_BLOCK_SIZE] = {0};
+        disk.rawdisk_read(inode.triple_indirect, indirect_buffer, IO_BLOCK_SIZE);
+        u_int64_t offset = INode::read_byte_at(8*((index-48-512-512*512)/(512*512)), indirect_buffer);
+        disk.rawdisk_read(offset,indirect_buffer, IO_BLOCK_SIZE);
+        offset = INode::read_byte_at(8*(((index-48-512-512*512)%(512*512))/512), indirect_buffer);
+        disk.rawdisk_read(offset,indirect_buffer, IO_BLOCK_SIZE);
+        return INode::read_byte_at(8*(((index-48-512-512*512)%512), indirect_buffer);
+    } else {
+        printf("index out of range, tried to access index %llu, max index %llu\n", index, 48+512+512*512+512*512*512);
+        return -1;
+    }
+}
+
 int FilesOperation::read_datablock(INode& inode, u_int64_t index, char* buffer) {
     if (index >= inode.size) {
         printf("Read datablock out of range, inode number %llu", inode.block_number);
         return -1;
     }
-    if (index < 48) {
-        return disk.rawdisk_read(inode.blocks[index], buffer, IO_BLOCK_SIZE);
-    } else {
-        perror("Read indirect datablocks not implemented yet");
+    u_int64_t read_offset = index_to_offset(disk, index);
+    if (read_offset == (u_int64_t)(-1)) {
         return -1;
     }
+    return disk.rawdisk_read(read_offset, buffer, IO_BLOCK_SIZE);
 }
 
 int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer) {
@@ -64,12 +90,11 @@ int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer)
         u_int64_t ret = inode.datablock_allocate(disk);
         inode.size += 1;
     }
-    if (index < 48) {
-        return disk.rawdisk_write(inode.blocks[index], buffer, IO_BLOCK_SIZE);
-    } else {
-        perror("Write indirect datablocks not implemented yet");
+    u_int64_t write_offset = index_to_offset(disk, index);
+    if (write_offset == (u_int64_t)(-1)) {
         return -1;
     }
+    return disk.rawdisk_read(write_offset, buffer, IO_BLOCK_SIZE);
 }
 
 INode* FilesOperation::new_inode(u_int64_t inode_number, u_int64_t permissions) {
