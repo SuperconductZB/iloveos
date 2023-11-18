@@ -7,7 +7,7 @@ class FilesOperation {
     u_int64_t root_inode;
     public:
     FilesOperation(RawDisk&);
-    int read_datablock(INode& inode, u_int64_t index, char* buffer);
+    int read_datablock(const INode& inode, u_int64_t index, char* buffer);
     int write_datablock(INode& inode, u_int64_t index, char* buffer);
     INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
     void initialize_rootinode();

@@ -46,7 +46,7 @@ FilesOperation::FilesOperation(RawDisk& disk_): disk(disk_) {
     inop.initialize(disk);
 }
 
-u_int64_t index_to_offset(disk& disk, u_int64_t index) {
+u_int64_t index_to_offset(const INode& inode, RawDisk& disk, u_int64_t index) {
     if (index < 48) {
         return inode.blocks[index];
     } else if (index < 48 + 512){
@@ -66,19 +66,19 @@ u_int64_t index_to_offset(disk& disk, u_int64_t index) {
         disk.rawdisk_read(offset,indirect_buffer, IO_BLOCK_SIZE);
         offset = INode::read_byte_at(8*(((index-48-512-512*512)%(512*512))/512), indirect_buffer);
         disk.rawdisk_read(offset,indirect_buffer, IO_BLOCK_SIZE);
-        return INode::read_byte_at(8*(((index-48-512-512*512)%512), indirect_buffer);
+        return INode::read_byte_at(8*((index-48-512-512*512)%512), indirect_buffer);
     } else {
         printf("index out of range, tried to access index %llu, max index %llu\n", index, 48+512+512*512+512*512*512);
         return -1;
     }
 }
 
-int FilesOperation::read_datablock(INode& inode, u_int64_t index, char* buffer) {
+int FilesOperation::read_datablock(const INode& inode, u_int64_t index, char* buffer) {
     if (index >= inode.size) {
         printf("Read datablock out of range, inode number %llu", inode.block_number);
         return -1;
     }
-    u_int64_t read_offset = index_to_offset(disk, index);
+    u_int64_t read_offset = index_to_offset(inode, disk, index);
     if (read_offset == (u_int64_t)(-1)) {
         return -1;
     }
@@ -90,7 +90,7 @@ int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer)
         u_int64_t ret = inode.datablock_allocate(disk);
         inode.size += 1;
     }
-    u_int64_t write_offset = index_to_offset(disk, index);
+    u_int64_t write_offset = index_to_offset(inode, disk, index);
     if (write_offset == (u_int64_t)(-1)) {
         return -1;
     }
