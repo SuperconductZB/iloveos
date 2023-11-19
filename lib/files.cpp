@@ -163,6 +163,20 @@ u_int64_t FilesOperation::create_new_inode(u_int64_t parent_inode_number, const 
         return -1;
     }
 
+    // Check if file or directory already exists
+    char r_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<inode.size; idx++) {
+        read_datablock(inode, idx, r_buffer);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+            ent.deserialize(r_buffer+i);
+            if (strcmp(ent.file_name, name)==0) {
+                printf("Already exists file or directory with name %s, cannot not create\n", name);
+                return -1;
+            }
+        }
+    }
+
     u_int64_t new_inode_number = 0;
 
     char rw_buffer[IO_BLOCK_SIZE] = {0};

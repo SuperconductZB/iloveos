@@ -29,7 +29,9 @@ int main(int argc, char *argv[]) {
     u_int64_t f1 = fsop.fischl_mkdir("foo/bar",0);
     u_int64_t f2 = fsop.fischl_mkdir("/doesnt_exist/bar",0);
     u_int64_t f3 = fsop.fischl_mkdir("/test/bar",0);
-    // TODO: guard against creating an existing file or diretory, such as fsop.fischl_mkdir("/test",0)
+    u_int64_t f4 =  fsop.fischl_mkdir("/test",0);
+    u_int64_t f5 =  fsop.fischl_mkdir("/foo/bar",0);
+    u_int64_t f6 =  fsop.fischl_mkdir("/foo/bar/..",0);
 
     // write to files (TODO: fischl_write)
     // read and write to indirect datablocks are not supported yet
@@ -99,6 +101,15 @@ int main(int argc, char *argv[]) {
     }
     for(int i=1;i<700;i+=2){
         u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
+        assert(inode_number == inode_numbers[i]);
+    }
+    fsop.printDirectory(file_pressure);
+    std::string newprefix = "/pressure/New";
+    for(int i=0;i<700;i+=2){
+        inode_numbers[i] = fsop.fischl_mkdir((newprefix+std::to_string(i)).c_str(), 0);
+    }
+    for(int i=0;i<700;i+=2){
+        u_int64_t inode_number = fsop.namei((newprefix+std::to_string(i)).c_str());
         assert(inode_number == inode_numbers[i]);
     }
     fsop.printDirectory(file_pressure);
