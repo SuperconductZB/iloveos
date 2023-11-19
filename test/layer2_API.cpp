@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     printf("=== Part 5: pressure test create files ===\n");
     u_int64_t file_pressure = fsop.fischl_mkdir("/pressure", 0);
     u_int64_t inode_numbers[700];
-    std::string prefix = "/pressure/";
+    std::string prefix = "/pressure/No_";
     for(int i=0;i<700;i++){
         inode_numbers[i] = fsop.fischl_mkdir((prefix+std::to_string(i)).c_str(), 0);
     }
@@ -88,4 +88,18 @@ int main(int argc, char *argv[]) {
         u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
         assert(inode_number == inode_numbers[i]);
     }
+
+    printf("=== Part 6: unlink test ===\n");
+    fsop.printDirectory(file_pressure);
+    for(int i=0;i<700;i+=2){
+        assert(!fsop.fischl_unlink((prefix+std::to_string(i)).c_str()));
+    }
+    for(int i=0;i<4;i+=2){
+        assert(fsop.namei((prefix+std::to_string(i)).c_str())==(u_int64_t)(-1));
+    }
+    for(int i=1;i<700;i+=2){
+        u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
+        assert(inode_number == inode_numbers[i]);
+    }
+    fsop.printDirectory(file_pressure);
 }

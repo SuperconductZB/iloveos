@@ -295,3 +295,76 @@ u_int64_t FilesOperation::fischl_mknod(const char* path, mode_t mode) {
     delete pathdup;
     return ret;
 }
+
+void FilesOperation::unlink_inode(u_int64_t inode_number) {
+    INode inode;
+    inode.inode_construct(inode_number, disk);
+    if ((inode.permissions & S_IFMT) == S_IFDIR) {
+        char buffer[IO_BLOCK_SIZE] = {0};
+        for(u_int64_t idx=0; idx<inode.size; idx++) {
+            read_datablock(inode, idx, buffer);
+            DirectoryEntry ent;
+            for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+                if(ent.inode_number && strcmp(ent.file_name,".") && strcmp(ent.file_name,"..")){
+                    unlink_inode(ent.inode_number);
+                }
+            }
+        }
+    }
+    while(inode.size != 0) {
+        inode.datablock_deallocate(disk);
+        inode.size--;
+    }
+    inop.inode_free(disk, inode_number);
+}
+
+int FilesOperation::fischl_unlink(const char* path) {
+    char *pathdup = strdup(path);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0';
+    char *filename = lastSlash+1;
+    char *ParentPath = pathdup;
+    if (!strcmp(filename,".")||!strcmp(filename,"..")) {
+        printf("refusing to remove . or ..\n");
+        return -1;
+    }
+    u_int64_t parent_inode = namei(ParentPath);
+    if (parent_inode == (u_int64_t)(-1)) {
+        delete pathdup;
+        return -1;
+    }
+    u_int64_t target_inode = 0;
+
+    // remove its record from parent
+    INode parent_INode;
+    parent_INode.inode_construct(parent_inode, disk);
+    char rw_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<parent_INode.size; idx++) {
+        read_datablock(parent_INode, idx, rw_buffer);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+            ent.deserialize(rw_buffer+i);
+            if (strcmp(ent.file_name, filename)==0) {
+                target_inode = ent.inode_number;
+                ent.inode_number = 0;
+                ent.serialize(rw_buffer+i);
+                break;
+            }
+        }
+        if (target_inode) {
+            write_datablock(parent_INode, idx, rw_buffer);
+            break;
+        }
+    }
+    
+    // remove inode itself
+    if (target_inode) {
+        unlink_inode(target_inode);
+        delete pathdup;
+        return 0;
+    } else {
+        printf("cannot find %s in %s", filename, ParentPath);
+        delete pathdup;
+        return -1;
+    }
+}
