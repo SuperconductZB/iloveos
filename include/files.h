@@ -5,12 +5,14 @@ class FilesOperation {
     RawDisk& disk;
     INodeOperation inop;
     u_int64_t root_inode;
+    INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
+    void create_dot_dotdot(INode*, u_int64_t);
     public:
     FilesOperation(RawDisk&);
     int read_datablock(const INode& inode, u_int64_t index, char* buffer);
-    int write_datablock(INode& inode, u_int64_t index, char* buffer);
-    INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
+    int write_datablock(INode& inode, u_int64_t index, const char* buffer);
     void initialize_rootinode();
+    void printDirectory(u_int64_t);
     u_int64_t create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     u_int64_t namei(const char* path);
     u_int64_t fischl_mkdir(const char*, mode_t);

@@ -64,7 +64,7 @@ public:
     }
 
     // Write a specified number of bytes at a given byte offset
-    int rawdisk_write(u_int64_t offset, char *buffer, size_t length) {
+    int rawdisk_write(u_int64_t offset, const char *buffer, size_t length) {
         if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
             perror("Error seeking to offset");
             return -1;

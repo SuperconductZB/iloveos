@@ -41,6 +41,8 @@ int main(int argc, char *argv[]) {
     inode.inode_construct(file4, *H);
     buffer[0] = '4';
     fsop.write_datablock(inode, 3, buffer);
+    buffer[0] = '5';
+    fsop.write_datablock(inode, 101, buffer);
     inode.inode_save(*H);
     // TODO: guard against overwriting directory datablocks
 
@@ -52,6 +54,12 @@ int main(int argc, char *argv[]) {
     u_int64_t file_baz = fsop.namei("/foo/bar/baz");
     printf("inode number for \"/foo/bar/baz\" is %llu\n", file_baz);
     assert(file_baz == file4);
+    u_int64_t file_foo = fsop.namei("/foo/bar/..");
+    printf("inode number for \"/foo/bar/..\" is %llu\n", file_foo);
+    assert(file_foo == file2);
+    u_int64_t file_bar = fsop.namei("/foo/bar/.");
+    printf("inode number for \"/foo/bar/.\" is %llu\n", file_bar);
+    assert(file_bar == file3);
 
     // read files (TODO: fischl_read)
     printf("=== Part 4: read from files ===\n");
@@ -63,4 +71,6 @@ int main(int argc, char *argv[]) {
     inode_read.inode_construct(file_baz, *H);
     fsop.read_datablock(inode_read, 3, read_buffer);
     assert(read_buffer[0] == '4');
+    fsop.read_datablock(inode_read, 101, read_buffer);
+    assert(read_buffer[0] == '5');
 }

@@ -85,7 +85,7 @@ int FilesOperation::read_datablock(const INode& inode, u_int64_t index, char* bu
     return disk.rawdisk_read(read_offset, buffer, IO_BLOCK_SIZE);
 }
 
-int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer) {
+int FilesOperation::write_datablock(INode& inode, u_int64_t index, const char* buffer) {
     while (index >= inode.size) {
         u_int64_t ret = inode.datablock_allocate(disk);
         inode.size += 1;
@@ -94,7 +94,7 @@ int FilesOperation::write_datablock(INode& inode, u_int64_t index, char* buffer)
     if (write_offset == (u_int64_t)(-1)) {
         return -1;
     }
-    return disk.rawdisk_read(write_offset, buffer, IO_BLOCK_SIZE);
+    return disk.rawdisk_write(write_offset, buffer, IO_BLOCK_SIZE);
 }
 
 INode* FilesOperation::new_inode(u_int64_t inode_number, u_int64_t permissions) {
@@ -110,12 +110,43 @@ INode* FilesOperation::new_inode(u_int64_t inode_number, u_int64_t permissions) 
     return inode;
 }
 
+void FilesOperation::create_dot_dotdot(INode* inode, u_int64_t parent_inode_number) {
+    if(inode->size != 0) {
+        printf("Error: create_dot_dotdot should only be called on new inode for directory\n");
+    }
+    char buffer[IO_BLOCK_SIZE] = {0};
+    DirectoryEntry dot;
+    dot.inode_number = inode->block_number;
+    strcpy(dot.file_name, ".");
+    dot.serialize(buffer);
+    DirectoryEntry dotdot;
+    dotdot.inode_number = parent_inode_number;
+    strcpy(dotdot.file_name, "..");
+    dotdot.serialize(buffer+64);
+    int ret = write_datablock(*inode, 0, buffer);
+    inode->inode_save(disk);
+}
+
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     root_inode = inop.inode_allocate(disk);
     printf("Info: root inode number: %llu\n", root_inode);
     INode *get_inode = new_inode(root_inode, S_IFDIR);
+    create_dot_dotdot(get_inode, root_inode);
     delete get_inode;
+}
+
+void FilesOperation::printDirectory(u_int64_t inode_number) {
+    INode inode;
+    inode.inode_construct(inode_number, disk);
+    char buffer[IO_BLOCK_SIZE] = {0};
+    read_datablock(inode, 0, buffer);
+    DirectoryEntry ent;
+    for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+        ent.deserialize(buffer+i);
+        printf("%d(%s)\t", i, ent.file_name);
+    }
+    printf("\n");
 }
 
 u_int64_t FilesOperation::create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode) {
@@ -156,6 +187,9 @@ u_int64_t FilesOperation::create_new_inode(u_int64_t parent_inode_number, const 
 
     // initialize new file
     INode *get_inode = new_inode(new_inode_number, mode);
+    if ((get_inode->permissions & S_IFMT) == S_IFDIR) {
+        create_dot_dotdot(get_inode, parent_inode_number);
+    }
     delete get_inode;
     return new_inode_number;
 }
