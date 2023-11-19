@@ -137,6 +137,7 @@ void FilesOperation::initialize_rootinode() {
 }
 
 void FilesOperation::printDirectory(u_int64_t inode_number) {
+    // limit to first datablock
     INode inode;
     inode.inode_construct(inode_number, disk);
     char buffer[IO_BLOCK_SIZE] = {0};
@@ -144,7 +145,7 @@ void FilesOperation::printDirectory(u_int64_t inode_number) {
     DirectoryEntry ent;
     for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
         ent.deserialize(buffer+i);
-        printf("%d(%s)\t", i, ent.file_name);
+        if (ent.inode_number) printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
     }
     printf("\n");
 }
@@ -161,29 +162,39 @@ u_int64_t FilesOperation::create_new_inode(u_int64_t parent_inode_number, const 
         printf("Parent Inode is not a directory\n");
         return -1;
     }
-    char buffer[IO_BLOCK_SIZE] = {0};
-    if (inode.size > 0) read_datablock(inode, 0, buffer);
-    
-    // do create inode
+
     u_int64_t new_inode_number = 0;
-    DirectoryEntry ent;
-    for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
-        ent.deserialize(buffer+i);
-        if (ent.inode_number == 0) {
-            new_inode_number = inop.inode_allocate(disk);
-            ent.inode_number = new_inode_number;
-            strcpy(ent.file_name, name);
-            ent.serialize(buffer+i);
+
+    char rw_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<inode.size; idx++) {
+        read_datablock(inode, idx, rw_buffer);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+            ent.deserialize(rw_buffer+i);
+            if (ent.inode_number == 0) {
+                new_inode_number = inop.inode_allocate(disk);
+                ent.inode_number = new_inode_number;
+                strcpy(ent.file_name, name);
+                ent.serialize(rw_buffer+i);
+                break;
+            }
+        }
+        if (new_inode_number) {
+            write_datablock(inode, idx, rw_buffer);
             break;
         }
     }
-    if (new_inode_number == 0) {
-        perror("Failed to create file in directory: First datablock full");
-        return -1;
-    } else {
-        write_datablock(inode, 0, buffer);
+    
+    if (!new_inode_number) {
+        char write_buffer[IO_BLOCK_SIZE] = {0};
+        DirectoryEntry ent;
+        new_inode_number = inop.inode_allocate(disk);
+        ent.inode_number = new_inode_number;
+        strcpy(ent.file_name, name);
+        ent.serialize(write_buffer);
+        write_datablock(inode, inode.size, write_buffer);
+        inode.inode_save(disk);
     }
-    inode.inode_save(disk);
 
     // initialize new file
     INode *get_inode = new_inode(new_inode_number, mode);
@@ -212,16 +223,20 @@ u_int64_t FilesOperation::namei(const char* path) {
             printf("namei: %s is not a non-empty directory\n", current_dirname.c_str());
             return -1;
         }
-        char buffer[IO_BLOCK_SIZE] = {0};
-        read_datablock(inode, 0, buffer);
         u_int64_t new_inode_number = 0;
-        DirectoryEntry ent;
-        for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
-            ent.deserialize(buffer+i);
-            if (strcmp(ent.file_name, new_name.c_str()) == 0) {
-                new_inode_number = ent.inode_number;
-                break;
+
+        char buffer[IO_BLOCK_SIZE] = {0};
+        for(u_int64_t idx=0; idx<inode.size; idx++) {
+            read_datablock(inode, idx, buffer);
+            DirectoryEntry ent;
+            for(int i=0;i<=IO_BLOCK_SIZE-64;i+=64){
+                ent.deserialize(buffer+i);
+                if (strcmp(ent.file_name, new_name.c_str()) == 0) {
+                    new_inode_number = ent.inode_number;
+                    break;
+                }
             }
+            if (new_inode_number) break;
         }
         if (!new_inode_number) {
             printf("namei: no name matching %s under directory %s\n", new_name.c_str(), current_dirname.c_str());
@@ -238,7 +253,6 @@ u_int64_t FilesOperation::namei(const char* path) {
     // path = "/notnonemptydir/foo" should raise error
 }
 
-/**/
 u_int64_t FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
     //check path
     char *pathdup = strdup(path);

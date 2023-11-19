@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <assert.h>
 #include "files.h"
 
@@ -19,8 +19,10 @@ int main(int argc, char *argv[]) {
     printf("/test is inode %llu, it is a file\n", file1);
     u_int64_t file2 = fsop.fischl_mkdir("/foo",0);
     printf("/foo is inode %llu, it is a directory\n", file2);
+    fsop.printDirectory(1);
     u_int64_t file3 = fsop.fischl_mkdir("/foo/bar",0);
     printf("/foo/bar is inode %llu, it is a directory\n", file3);
+    fsop.printDirectory(file2);
     u_int64_t file4 = fsop.fischl_mknod("/foo/bar/baz",0);
     printf("/foo/bar/baz is inode %llu, it is a file\n", file4);
     // the following three testcases will fail
@@ -73,4 +75,17 @@ int main(int argc, char *argv[]) {
     assert(read_buffer[0] == '4');
     fsop.read_datablock(inode_read, 101, read_buffer);
     assert(read_buffer[0] == '5');
+
+    // pressure test create directory
+    printf("=== Part 5: pressure test create files ===\n");
+    u_int64_t file_pressure = fsop.fischl_mkdir("/pressure", 0);
+    u_int64_t inode_numbers[700];
+    std::string prefix = "/pressure/";
+    for(int i=0;i<700;i++){
+        inode_numbers[i] = fsop.fischl_mkdir((prefix+std::to_string(i)).c_str(), 0);
+    }
+    for(int i=0;i<700;i++){
+        u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
+        assert(inode_number == inode_numbers[i]);
+    }
 }

@@ -14,6 +14,7 @@ class FilesOperation {
     void initialize_rootinode();
     void printDirectory(u_int64_t);
     u_int64_t create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
+    // int unlink_inode(u_int64_t inode_number);
     u_int64_t namei(const char* path);
     u_int64_t fischl_mkdir(const char*, mode_t);
     u_int64_t fischl_mknod(const char*, mode_t);
