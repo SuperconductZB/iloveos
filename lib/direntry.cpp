@@ -1,3 +1,10 @@
+#include <stdio.h>
+#include <string>
+#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "fs.h"
+#include "direntry.h"
 /*********************************Hash operation********************************************
 
 ********************************************************************************************/
@@ -34,6 +41,38 @@ FileNode *lookupHash(HashTable *h, char *key) {
         node = node->next;
     }
     return NULL; // Not found
+}
+
+TreeNode *createDirectory(const char *dirName, TreeNode *parent, int hashSize) {
+    TreeNode *newDir = (TreeNode *)malloc(sizeof(TreeNode));
+    newDir->dirName = strdup(dirName);
+    newDir->contents = createHashTable(hashSize);
+    newDir->parent = parent;
+    if (parent) {
+        newDir->self_info = insertHash(parent->contents, newDir->dirName, newDir);
+    }
+    return newDir;
+}
+
+TreeNode *find_parentPath(TreeNode *root, const char *path) {
+    char *pathCopy = strdup(path);
+    char *segment = strtok(pathCopy, "/");
+    TreeNode *current = root;
+    FileNode *file = NULL;
+
+    while (segment != NULL && current != NULL) {
+        file = lookupHash(current->contents, segment);
+        if (file != NULL && file->subdirectory == NULL) {
+            free(pathCopy); 
+            printf("status current directory %s\n",current->dirName);
+            return current; //File found
+        }
+        current = file ? file->subdirectory : NULL;
+        segment = strtok(NULL, "/");
+    }
+
+    free(pathCopy);
+    return current; // NULL if not found
 }
 
 void freeHashTable(HashTable *table) {

@@ -11,13 +11,13 @@ typedef struct fileNode {
             buffer[j] = t & (((u_int64_t)1<<(8))-1);
             t >>= 8;
         }
-        strcpy(buffer+8, file_name);
+        strcpy(buffer+8, name);
     }
     void deserialize(char* buffer) {
         inode_number = 0;
         for (int j = 0; j < 8; j++)
             inode_number = inode_number | (((u_int64_t)(unsigned char)buffer[j])<<(8*j));
-        strcpy(file_name, buffer+8);
+        strcpy(name, buffer+8);
     }
 } FileNode;
 
@@ -39,3 +39,8 @@ int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileNam
 //e.g. FileNode *Dirnode = fischl_find_entry(); can see file inside with Dirnode->subdirectory
 //e.g. go to the current Dirnode parent directory, use TreeNode *get_Dir_parent = Dirnode->subdirectory->parent;
 FileNode *fischl_find_entry(TreeNode *root, const char *path);
+
+void freeTree(TreeNode *node);
+/*for debug use*/
+TreeNode *createDirectory(const char *dirName, TreeNode *parent, int hashSize);
+TreeNode *find_parentPath(TreeNode *root, const char *path);
