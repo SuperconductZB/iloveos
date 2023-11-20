@@ -2,45 +2,8 @@
 #include "files.h"
 #include <string.h>
 #include <sstream>
+#include "direntry.h"
 
-/*********************************************************************
-                Directory Entry definition and function
-
-
-*********************************************************************/
-struct DirectoryEntry {
-    u_int64_t inode_number;
-    char file_name[56];
-    void serialize(char* buffer) {
-        u_int64_t t = inode_number;
-        for (int j = 0; j < 8; j++){
-            buffer[j] = t & (((u_int64_t)1<<(8))-1);
-            t >>= 8;
-        }
-        strcpy(buffer+8, file_name);
-    }
-    void deserialize(char* buffer) {
-        inode_number = 0;
-        for (int j = 0; j < 8; j++)
-            inode_number = inode_number | (((u_int64_t)(unsigned char)buffer[j])<<(8*j));
-        strcpy(file_name, buffer+8);
-    }
-};
-//Directory collection
-typedef struct {
-    //DirectoryEntry entries[MAX_ENTRIES]; with tree structure
-    unsigned int num_entries;
-} Directory;
-/*
- *	fishcl_add_entry()
- *
- * adds a file entry to the specified directory, using the same
- * semantics as fishcl_find_entry(). It returns NULL if it failed.
- *
- */
-static int fishcl_add_entry(Directory *dir, unsigned int inode_number, const char *name){
-
-}
 
 FilesOperation::FilesOperation(RawDisk& disk_): disk(disk_) {
     inop.initialize(disk);
