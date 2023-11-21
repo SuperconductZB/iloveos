@@ -160,6 +160,7 @@ TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *n
     newFile->name = strdup(fileName);
     newFile->inode_number = new_inode_number;
     newFile->permissions = new_inode->permissions;
+    newFile->subdirectory = newDir;
     newDir->self_info = newFile;
     return newDir;
 }
@@ -212,7 +213,10 @@ FileNode *fischl_find_entry(TreeNode *root, const char *path){
             current = current->parent;
             if (current == NULL) {
                 // If there's no parent, we've reached the top of the tree, but root itself is same
+                file = NULL;
                 break;
+            } else {
+                file = current->self_info;
             }
         } else if (strcmp(segment, ".") == 0) {
             // Stay in the current directory (no action needed)
