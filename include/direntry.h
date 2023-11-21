@@ -33,6 +33,8 @@ typedef struct treeNode {
     FileNode *self_info; //self fileNode infromation
 } TreeNode;
 
+/*for root*/
+TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *new_inode);
 /*root directory have its own initialization, so parent wont be NULL*/
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode *new_inode);
 /*if want to use dir mode use the subdirectory treeNode pointer */

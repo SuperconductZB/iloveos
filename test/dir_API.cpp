@@ -12,19 +12,25 @@
 #include "direntry.h"
 
 int main() {
-    TreeNode *root = createDirectory("/", NULL, 20);
+    //Init fake root directory
+    INode inode_root;
+    u_int64_t file_permissions = 0;
+    inode_root.permissions = file_permissions | S_IFDIR;
+    TreeNode *root = fischl_init_entry(0, "/", &inode_root);//0 is inode number assigned by inode_allocate()
+    //add file or dir under fake root
     INode inode_file1;
     fischl_add_entry(root, 2, "file1",&inode_file1);
     //I will put this function in create_new_inode function, there will inode number(2) when inode_allocate
     INode inode_dir1;
     //permission is necessary there to create treeNode or not
-    u_int64_t ddd_permissions = 0;
-    inode_dir1.permissions = ddd_permissions | S_IFDIR;
+    file_permissions = 0;
+    inode_dir1.permissions = file_permissions | S_IFDIR;
     fischl_add_entry(root, 3, "dir1",&inode_dir1);
     //find dir file (from root directory view, root contains dir1/ subdirectory)
     FileNode *get_dir1 = fischl_find_entry(root,"/dir1/");
     if(get_dir1 == NULL){
         printf("No dir1 under %s\n",root->dirName);
+        freeTree(root);
         return -1;
     }else{
         fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
@@ -54,6 +60,7 @@ int main() {
     get_file2 = fischl_find_entry(root,"/dir1/file2");
     if(get_file2 == NULL){
         printf("No dir1 under dir1\n");
+        freeTree(root);
         return -1;
     }else{
         fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
@@ -63,6 +70,7 @@ int main() {
     get_file2 = fischl_find_entry(get_dir1->subdirectory,"/file2");
     if(get_file2 == NULL){
         printf("No dir1 under %s\n",get_dir1->subdirectory->dirName);
+        freeTree(root);
         return -1;
     }else{
         fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
@@ -80,9 +88,20 @@ int main() {
     get_file3 = fischl_find_entry(get_dir1_tree,"/file3");
     if(get_file3 == NULL){
         printf("No dir1 under %s\n",get_dir1_tree->dirName);
+        freeTree(root);
         return -1;
     }else{
         printf(" %s under %s\n",get_file3->name,get_dir1_tree->dirName);
+    }
+    FileNode *get_file1 = NULL;//under root
+    //use .. to find
+    get_file1 = fischl_find_entry(get_dir1_tree,"../file1");
+    if(get_file1 == NULL){
+        printf("No file1\n");
+        freeTree(root);
+        return -1;
+    }else{
+        printf(" %s under root(..)\n",get_file1->name);
     }
     // Cleanup
     freeTree(root);
