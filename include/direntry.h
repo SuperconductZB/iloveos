@@ -35,7 +35,8 @@ typedef struct treeNode {
 
 /*for root*/
 TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *new_inode);
-/*root directory have its own initialization, so parent wont be NULL*/
+/*the to be added file in add_entry should be parent-child relationship with treenode, otherwise will wrong */
+/*see Add_FindFiletest in dir_API.cpp*/
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode *new_inode);
 /*if want to use dir mode use the subdirectory treeNode pointer */
 //e.g. FileNode *Dirnode = fischl_find_entry(); can see file inside with Dirnode->subdirectory

@@ -64,7 +64,7 @@ TreeNode *find_parentPath(TreeNode *root, const char *path) {
         file = lookupHash(current->contents, segment);
         if (file != NULL && file->subdirectory == NULL) {
             free(pathCopy); 
-            printf("status current directory %s\n",current->dirName);
+            //printf("status current directory %s\n",current->dirName);
             return current; //File found
         }
         current = file ? file->subdirectory : NULL;
@@ -107,7 +107,7 @@ void freeTree(TreeNode *node) {
                     freeTree(temp->subdirectory);
                 }
                 // Free the FileNode if it's not a directory
-                printf("free who %s\n",temp->name);
+                // printf("free who %s\n",temp->name);
                 free(temp->name);
                 free(temp);
             }

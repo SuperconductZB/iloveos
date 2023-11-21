@@ -25,6 +25,7 @@ add_executable(${TARGET_DIR_API}
 # Link Google Test to your test executables
 target_link_libraries(${TARGET_LAYER0} gtest gtest_main)
 target_link_libraries(${TARGET_LAYER1_API} gtest gtest_main)
+target_link_libraries(${TARGET_DIR_API} gtest gtest_main)
 
 # add test to activate ctest -VV
 add_test(NAME ${TARGET_LAYER0} COMMAND sudo ./${TARGET_LAYER0} ${DIR_PLACE})
