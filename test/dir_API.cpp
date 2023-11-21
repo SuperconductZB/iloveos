@@ -84,6 +84,16 @@ int main() {
     }else{
         printf(" %s under %s\n",get_file3->name,get_dir1_tree->dirName);
     }
+    // pressure test
+    INode inode_fileN;
+    for(int i=6;i<100;i++) {
+        fischl_add_entry(get_dir1_tree, i, (std::string("file")+std::to_string(i)).c_str(), &inode_fileN);
+    }
+    for(int i=6;i<100;i++){
+        FileNode *get_fileN = fischl_find_entry(get_dir1_tree, (std::string("file")+std::to_string(i)).c_str());
+        assert(get_fileN != NULL);
+        assert(get_fileN->inode_number == i);
+    }
     // Cleanup
     freeTree(root);
 

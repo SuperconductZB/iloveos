@@ -14,6 +14,7 @@ add_executable(${TARGET_LAYER1_API}
     layer1_API.cpp
 )
 add_executable(${TARGET_LAYER2_API}
+    ../lib/direntry.cpp
     ../lib/files.cpp
     layer2_API.cpp
 )

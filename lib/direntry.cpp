@@ -43,6 +43,29 @@ FileNode *lookupHash(HashTable *h, char *key) {
     return NULL; // Not found
 }
 
+bool removeHash(HashTable *h, char *key) {
+    unsigned int hashval = hash(h, key);
+    FileNode *node = h->table[hashval];
+    if (node == NULL) return false;
+    if (strcmp(node->name, key) == 0) {
+        h->table[hashval] = node->next;
+        return true;
+    }
+    FileNode *prev = NULL;
+    bool foundit = false;
+    while (node != NULL) {
+        if (strcmp(node->name, key) == 0) break;
+        prev = node;
+        node = node->next;
+    }
+    if (node == NULL) {
+        return false;
+    } else {
+        prev->next = node->next;
+        return true;
+    }
+}
+
 TreeNode *createDirectory(const char *dirName, TreeNode *parent, int hashSize) {
     TreeNode *newDir = (TreeNode *)malloc(sizeof(TreeNode));
     newDir->dirName = strdup(dirName);
@@ -147,6 +170,20 @@ int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileNam
     //free(Name); cannot free name
     return 0;
 }
+
+int fischl_rm_entry(TreeNode *parent, const char *fileName) {
+    char *fileName_dup = strdup(fileName);
+    if (parent->contents == NULL) return -1;
+    FileNode *file = NULL;
+    file = lookupHash(parent->contents, fileName_dup);
+    if (file == NULL) return -1;
+    if (file->subdirectory != NULL) freeTree(file->subdirectory);
+    removeHash(parent->contents, fileName_dup);
+    free(file->name);
+    free(file);
+    delete fileName_dup;
+}
+
 
 FileNode *fischl_find_entry(TreeNode *root, const char *path){
     //support . and .. function
