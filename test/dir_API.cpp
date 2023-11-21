@@ -14,7 +14,19 @@
 
 const char* d;
 
-TreeNode *root;//global can be taken
+//global can be taken
+TreeNode *root;
+const char* target_filepath;
+
+const char* get_baseName(const char *filename){
+    const char* base_name = strrchr(filename, '/');
+    if (base_name != NULL) {
+        base_name++; // Move past the '/' character
+    } else {
+        base_name = filename; // No '/' found, use the original string
+    }
+    return base_name;
+}
 
 TEST(DirTest, root_test) {
     //Init fake root directory
@@ -35,17 +47,24 @@ TEST(DirTest, AddFile_test) {
 }
 TEST(DirTest, FindFile_test) {
     //find file
-    FileNode *get_file = fischl_find_entry(root,"/file1");
+    target_filepath = "/file1";
+    FileNode *get_file = fischl_find_entry(root,target_filepath);
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name,"file1");
+    EXPECT_STREQ(get_file->name, get_baseName(target_filepath));
     //find dir
-    FileNode *get_dir = fischl_find_entry(root,"/dir1/");
+    target_filepath = "/dir1/";
+    FileNode *get_dir = fischl_find_entry(root,target_filepath);
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "dir1");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
     //check . function
     get_dir = fischl_find_entry(root,"./");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "/");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //check .. function
+    get_dir = fischl_find_entry(root,"..");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
     EXPECT_STREQ(get_dir->name, "/");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
 }
@@ -81,14 +100,23 @@ TEST(DirTest, Add_FindFile_test) {
     //add one more file under dir1
     fischl_add_entry(get_dir->subdirectory, 5, "file3",&inode_file);
     //find
-    get_file = fischl_find_entry(get_dir_tree,"./file3");
+    get_file = fischl_find_entry(get_dir->subdirectory,"./file3");
     EXPECT_TRUE(get_file != NULL);
     EXPECT_STREQ(get_file->name,"file3");
     //use .. from dir1 to find file1 
-    get_file = fischl_find_entry(get_dir_tree,"../file1");
+    get_file = fischl_find_entry(get_dir->subdirectory,"../file1");
     EXPECT_TRUE(get_file != NULL);
     EXPECT_STREQ(get_file->name,"file1");
-    
+    //check dir1 with .
+    get_dir = fischl_find_entry(get_dir->subdirectory,".");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
+    EXPECT_STREQ(get_dir->name, "dir1");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //check root with dir1
+    get_dir = fischl_find_entry(get_dir->subdirectory,"..");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
+    EXPECT_STREQ(get_dir->name, "/");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
 }
 
 int main(int argc, char **argv) {
