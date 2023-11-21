@@ -87,7 +87,7 @@ TreeNode *find_parentPath(TreeNode *root, const char *path) {
         file = lookupHash(current->contents, segment);
         if (file != NULL && file->subdirectory == NULL) {
             free(pathCopy); 
-            printf("status current directory %s\n",current->dirName);
+            //printf("status current directory %s\n",current->dirName);
             return current; //File found
         }
         current = file ? file->subdirectory : NULL;
@@ -130,7 +130,7 @@ void freeTree(TreeNode *node) {
                     freeTree(temp->subdirectory);
                 }
                 // Free the FileNode if it's not a directory
-                printf("free who %s\n",temp->name);
+                // printf("free who %s\n",temp->name);
                 free(temp->name);
                 free(temp);
             }
@@ -150,6 +150,20 @@ void freeTree(TreeNode *node) {
 /*********************************Direntry operation******************************************
 
 ********************************************************************************************/
+//for fake root (mount point)
+TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *new_inode) {
+    TreeNode *newDir = (TreeNode *)malloc(sizeof(TreeNode));
+    newDir->dirName = strdup(fileName);
+    newDir->contents = createHashTable(20);//hashSize define 20
+    newDir->parent = newDir;
+    FileNode *newFile = (FileNode *)malloc(sizeof(FileNode));
+    newFile->name = strdup(fileName);
+    newFile->inode_number = new_inode_number;
+    newFile->permissions = new_inode->permissions;
+    newDir->self_info = newFile;
+    return newDir;
+}
+
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode *new_inode){
     char *Name = strdup(fileName);
     TreeNode *newDir = NULL;
@@ -193,17 +207,34 @@ FileNode *fischl_find_entry(TreeNode *root, const char *path){
     FileNode *file = NULL;
 
     while (segment != NULL && current != NULL) {
-        file = lookupHash(current->contents, segment);
-        if (file != NULL && file->subdirectory == NULL) {
-            free(pathCopy);
-            return file; //File found
-            //return current; return filenode
+        if (strcmp(segment, "..") == 0) {
+            // Move up to the parent directory
+            current = current->parent;
+            if (current == NULL) {
+                // If there's no parent, we've reached the top of the tree, but root itself is same
+                break;
+            }
+        } else if (strcmp(segment, ".") == 0) {
+            // Stay in the current directory (no action needed)
+        } 
+        else{
+            file = lookupHash(current->contents, segment);
+            if (file != NULL && file->subdirectory == NULL) {
+                free(pathCopy);
+                return file; //File found
+                //return current; return filenode
+            }
+            current = file ? file->subdirectory : NULL;
         }
-        current = file ? file->subdirectory : NULL;
         segment = strtok(NULL, "/");
     }
 
     free(pathCopy);
+
+    if (current != NULL && file == NULL) {
+        // If we've stopped at a directory and not a file, return the directory's self info
+        return current->self_info;
+    }
+
     return file; // NULL if not found
-    //return current; return filenode
 }

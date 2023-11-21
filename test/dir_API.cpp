@@ -8,94 +8,122 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <gtest/gtest.h>
 #include "fs.h"
 #include "direntry.h"
 
-int main() {
-    TreeNode *root = createDirectory("/", NULL, 20);
-    INode inode_file1;
-    fischl_add_entry(root, 2, "file1",&inode_file1);
-    //I will put this function in create_new_inode function, there will inode number(2) when inode_allocate
-    INode inode_dir1;
-    //permission is necessary there to create treeNode or not
-    u_int64_t ddd_permissions = 0;
-    inode_dir1.permissions = ddd_permissions | S_IFDIR;
-    fischl_add_entry(root, 3, "dir1",&inode_dir1);
-    //find dir file (from root directory view, root contains dir1/ subdirectory)
-    FileNode *get_dir1 = fischl_find_entry(root,"/dir1/");
-    if(get_dir1 == NULL){
-        printf("No dir1 under %s\n",root->dirName);
-        return -1;
-    }else{
-        fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
-        printf(" %s under %s\n",get_dir1->name,root->dirName);
+const char* d;
+
+//global can be taken
+TreeNode *root;
+const char* target_filepath;
+
+const char* get_baseName(const char *filename){
+    const char* base_name = strrchr(filename, '/');
+    if (base_name != NULL) {
+        base_name++; // Move past the '/' character
+    } else {
+        base_name = filename; // No '/' found, use the original string
     }
-    //add file2 under dir1
-    INode inode_file2;
-    if(get_dir1->subdirectory != NULL){
-        //Treenode dir(you cannot find here), you only can get Filenode dir based on fischl_find_entry Function
-        //So use Filenode->subdirectory will point to the treenode dir, then can add files
-        fischl_add_entry(get_dir1->subdirectory, 4, "file2",&inode_file2);
-        printf("add file2 in dir1\n");
-    }
-    /**********************************************************/
-    //This is for debugging, and demonstate to you
-    TreeNode *get_dir1_tree = find_parentPath(root,"/dir1/file2");
-    if(get_dir1_tree == get_dir1->subdirectory){
-        fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
-        printf(" [Treenode]get_dir1_tree->dirName (%s) same [Filenode]get_dir1->name (%s)\n",get_dir1_tree->dirName,get_dir1->name);
-    }else{
-        printf("not same\n");
-    }
-    /**********************************************************/
+    return base_name;
+}
+
+TEST(DirTest, root_test) {
+    //Init fake root directory
+    INode inode_root;
+    u_int64_t file_permissions = 0;
+    inode_root.permissions = file_permissions | S_IFDIR;
+    root = fischl_init_entry(0, "/", &inode_root);//0 is inode number assigned by inode_allocate()
+}
+TEST(DirTest, AddFile_test) {
+    //assume file and dir itself(content,metadata) same,but different name and inode number
+    INode inode_file;
+    INode inode_dir;
+    u_int64_t file_permissions = 0;
+    file_permissions = 0;
+    inode_dir.permissions = file_permissions | S_IFDIR;
+    fischl_add_entry(root, 2, "file1",&inode_file);
+    fischl_add_entry(root, 3, "dir1",&inode_dir);
+}
+TEST(DirTest, FindFile_test) {
+    //find file
+    target_filepath = "/file1";
+    FileNode *get_file = fischl_find_entry(root,target_filepath);
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name, get_baseName(target_filepath));
+    //find dir
+    target_filepath = "/dir1/";
+    FileNode *get_dir = fischl_find_entry(root,target_filepath);
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "dir1");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //check . function
+    get_dir = fischl_find_entry(root,"./");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "/");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //check .. function
+    get_dir = fischl_find_entry(root,"..");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
+    EXPECT_STREQ(get_dir->name, "/");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+}
+TEST(DirTest, Add_FindFile_test) {
+    //add file and dir under subdirectory instead of root
+    INode inode_file;
+    INode inode_dir;
+    u_int64_t file_permissions = 0;
+    file_permissions = 0;
+    inode_dir.permissions = file_permissions | S_IFDIR;
+
+    /*add with subdirectory*/
+    //Treenode dir(you cannot find here), you only can get Filenode dir based on fischl_find_entry Function
+    //So use Filenode->subdirectory will point to the treenode dir, then can add files
+    FileNode *get_dir = fischl_find_entry(root,"/dir1/");  
+    fischl_add_entry(get_dir->subdirectory, 4, "file2",&inode_file);
+    
+    //verfication treeNode and Filenode relationship
+    TreeNode *get_dir_tree = find_parentPath(root,"/dir1/file2");
+    ASSERT_TRUE(get_dir_tree == get_dir->subdirectory);//treeNode dir should be same as treeNode subdir in that Filenode
+ 
     //two Ways to get File(include dir itself) information
-    FileNode *get_file2 =NULL;
+    FileNode *get_file = NULL;
     //1. absolute path, the root(treeNode) will always exist when initialize
-    get_file2 = fischl_find_entry(root,"/dir1/file2");
-    if(get_file2 == NULL){
-        printf("No dir1 under dir1\n");
-        return -1;
-    }else{
-        fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
-        printf(" %s under %sdir1/\n",get_file2->name,root->dirName);
-    }
+    get_file = fischl_find_entry(root,"/dir1/file2");
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name,"file2");
     //2. relative path, the get_dir1(FileNode)->subdirectory(treeNode), use treeNode(dir) to find 
-    get_file2 = fischl_find_entry(get_dir1->subdirectory,"/file2");
-    if(get_file2 == NULL){
-        printf("No dir1 under %s\n",get_dir1->subdirectory->dirName);
-        return -1;
-    }else{
-        fprintf(stderr,"[%s ,%d]",__func__,__LINE__);
-        printf(" %s under %s\n",get_file2->name,get_dir1->subdirectory->dirName);
-    }
+    get_file = fischl_find_entry(get_dir->subdirectory,"/file2");
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name,"file2");
     /**********************************************************/
     //add one more file under dir1
-    INode inode_file3;
-    if(get_dir1->subdirectory != NULL){
-        fischl_add_entry(get_dir1_tree, 5, "file3",&inode_file3);
-        printf("add file3 in dir1\n");
-    }
-    FileNode *get_file3 =NULL;
-    //fischl_find_entry(get_dir1->subdirectory,"/file3"); are equivalent
-    get_file3 = fischl_find_entry(get_dir1_tree,"/file3");
-    if(get_file3 == NULL){
-        printf("No dir1 under %s\n",get_dir1_tree->dirName);
-        return -1;
-    }else{
-        printf(" %s under %s\n",get_file3->name,get_dir1_tree->dirName);
-    }
-    // pressure test
-    INode inode_fileN;
-    for(int i=6;i<100;i++) {
-        fischl_add_entry(get_dir1_tree, i, (std::string("file")+std::to_string(i)).c_str(), &inode_fileN);
-    }
-    for(int i=6;i<100;i++){
-        FileNode *get_fileN = fischl_find_entry(get_dir1_tree, (std::string("file")+std::to_string(i)).c_str());
-        assert(get_fileN != NULL);
-        assert(get_fileN->inode_number == i);
-    }
+    fischl_add_entry(get_dir->subdirectory, 5, "file3",&inode_file);
+    //find
+    get_file = fischl_find_entry(get_dir->subdirectory,"./file3");
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name,"file3");
+    //use .. from dir1 to find file1 
+    get_file = fischl_find_entry(get_dir->subdirectory,"../file1");
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name,"file1");
+    //check dir1 with .
+    get_dir = fischl_find_entry(get_dir->subdirectory,".");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
+    EXPECT_STREQ(get_dir->name, "dir1");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //check root with dir1
+    get_dir = fischl_find_entry(get_dir->subdirectory,"..");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success
+    EXPECT_STREQ(get_dir->name, "/");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+}
+
+int main(int argc, char **argv) {
+    d = (argc < 2) ? "/dev/vdc" : argv[1];//how to do with this?
+    ::testing::InitGoogleTest(&argc, argv);
+    int result = RUN_ALL_TESTS();
     // Cleanup
     freeTree(root);
-
-    return 0;
+    return result;
 }
