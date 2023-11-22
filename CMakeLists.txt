@@ -16,6 +16,7 @@ add_executable(fischl
   lib/fs/datablock_manager.cpp
   lib/fs/fs_data_types.cpp
   lib/fs/fs_resize.cpp
+  lib/fs/fs_read_write.cpp
   lib/fs/fs.cpp
   lib/fs/inode_manager.cpp
 

@@ -1,5 +1,4 @@
 #include "fs.hpp"
-#include <cmath>
 
 class DatablockOperation {
 public:
@@ -44,7 +43,7 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
 
   start_index -= IO_BLOCK_SIZE * IO_BLOCK_SIZE;
 
-  if (start_index < IO_BLOCK_SIZE * IO_BLOCK_SIZE * IO_BLOCK_SIZE) {
+  if (start_index < (u_int64_t)IO_BLOCK_SIZE * IO_BLOCK_SIZE * IO_BLOCK_SIZE) {
     if ((result = sweep_datablocks(&(inode_data->triple_indirect_block), 3,
                                    start_index, allocate, op)) <= 0)
       return result;
@@ -61,9 +60,6 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   char buf[IO_BLOCK_SIZE];
   int err;
   int result = -1;
-  u_int64_t temp;
-  u_int64_t next_block_num;
-  bool modified = false;
 
   if (allocate && (*block_num) == 0)
     if ((err = datablock_manager->new_datablock(block_num)) < 0)
@@ -92,14 +88,14 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   bool modified = false;
 
   for (size_t i = this_layer_start_index * sizeof(u_int64_t); i < IO_BLOCK_SIZE;
-       i += *sizeof(u_int64_t)) {
+       i += sizeof(u_int64_t)) {
     read_u64(&temp, &buf[i]);
     next_block_num = temp;
     if ((result = sweep_datablocks(&next_block_num, indirect_num - 1,
-                                   next_layer_start_index, allocate, func)) < 0)
+                                   next_layer_start_index, allocate, op)) < 0)
       return result;
     if (next_block_num != temp) {
-      write_u64(&next_block_num, &buf[i]);
+      write_u64(next_block_num, &buf[i]);
       modified = true;
     }
     if (result == 0)
@@ -119,7 +115,11 @@ public:
     char datablock_buf[IO_BLOCK_SIZE];
     int err;
 
-    size_t read_size = min(IO_BLOCK_SIZE - offset, count);
+    // printf("PRINT: (%d) %d %d %d\n", block_num, count, offset,
+    // bytes_completed);
+
+    size_t read_size =
+        std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
     if (block_num != 0) {
       if ((err = disk->read_block(block_num, datablock_buf)) < 0)
@@ -145,13 +145,13 @@ public:
     char datablock_buf[IO_BLOCK_SIZE];
     int err;
 
-    size_t write_size = min(IO_BLOCK_SIZE - offset, count);
+    size_t write_size =
+        std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
     if (write_size < IO_BLOCK_SIZE)
       if ((err = disk->read_block(block_num, datablock_buf)) < 0)
         return err;
 
-    size_t write_size = min(IO_BLOCK_SIZE - offset, count);
     memcpy(&datablock_buf[offset], &buf[bytes_completed], write_size);
 
     if ((err = disk->write_block(block_num, datablock_buf)) < 0)
@@ -171,17 +171,17 @@ ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
   int err;
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
-  size_t internal_offset = offset - block_start;
+  size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
 
   ReadDatablockOperation op = ReadDatablockOperation();
   op.offset = internal_offset;
   op.buf = buf;
-  op.count = min(count, inode_data->metadata.size - offset);
+  op.count = std::min(count, inode_data->metadata.size - offset);
   op.bytes_completed = 0;
   op.disk = disk;
 
-  if ((err = sweep_inode_datablocks(inode_data, start_block_index, false, op)) <
-      0)
+  if ((err = sweep_inode_datablocks(inode_data, start_block_index, false,
+                                    &op)) < 0)
     return err;
 
   return op.bytes_completed;
@@ -192,21 +192,21 @@ ssize_t Fs::write(INode_Data *inode_data, char buf[], size_t count,
   int err;
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
-  size_t internal_offset = offset - block_start;
+  size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
 
-  ReadDatablockOperation op = WriteDatablockOperation();
+  WriteDatablockOperation op = WriteDatablockOperation();
   op.offset = internal_offset;
   op.buf = buf;
   op.count = count;
   op.bytes_completed = 0;
   op.disk = disk;
 
-  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true, op)) <
+  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true, &op)) <
       0)
     return err;
 
   inode_data->metadata.size =
-      max(offset + op.bytes_completed, inode_data->metadata.size);
+      std::max(offset + op.bytes_completed, inode_data->metadata.size);
 
   return op.bytes_completed;
 }
