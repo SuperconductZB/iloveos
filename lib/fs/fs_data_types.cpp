@@ -86,19 +86,19 @@ size_t INode_Data::deserialize_metadata(char buf[]) {
 
 void INode_Data::serialize(char buf[]) {
   size_t i = 0;
-  i += serialize_metadata(&buf[i]);
-  i += write_u64(triple_indirect_block, &buf[i]);
-  i += write_u64(double_indirect_block, &buf[i]);
-  i += write_u64(single_indirect_block, &buf[i]);
   for (size_t j = 0; j < NUMBER_OF_DIRECT_BLOCKS; ++j)
     i += write_u64(direct_blocks[j], &buf[i]);
+  i += write_u64(single_indirect_block, &buf[i]);
+  i += write_u64(double_indirect_block, &buf[i]);
+  i += write_u64(triple_indirect_block, &buf[i]);
+  i += serialize_metadata(&buf[i]);
 }
 void INode_Data::deserialize(char buf[]) {
   size_t i = 0;
-  i += deserialize_metadata(&buf[i]);
-  i += read_u64(&triple_indirect_block, &buf[i]);
-  i += read_u64(&double_indirect_block, &buf[i]);
-  i += read_u64(&single_indirect_block, &buf[i]);
   for (size_t j = 0; j < NUMBER_OF_DIRECT_BLOCKS; ++j)
     i += read_u64(&direct_blocks[j], &buf[i]);
+  i += read_u64(&single_indirect_block, &buf[i]);
+  i += read_u64(&double_indirect_block, &buf[i]);
+  i += read_u64(&triple_indirect_block, &buf[i]);
+  i += deserialize_metadata(&buf[i]);
 }
