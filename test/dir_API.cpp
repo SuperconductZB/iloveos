@@ -13,11 +13,6 @@
 #include "fs.h"
 #include "direntry.h"
 
-const char* d;
-
-//global can be taken
-TreeNode *root;
-const char* target_filepath;
 typedef struct file_test{
     const char* name;
     file_test* next;//use linked-list to know the file at the same level directory
@@ -29,19 +24,17 @@ typedef struct dir_test{
     dir_test*   next;//use linked-list to know the other dir at the same parent dir.
 }dir_test;
 
-int total_number = 0;
+//global can be taken
+const char* d;
+TreeNode *root;
+std::string target_filepath;
+dir_test* mock_root = nullptr;
+
+int total_dir_num = 0;
+int total_file_num = 0;
 int total_free_dir = 0;
 int total_free_file = 0;
 
-const char* get_baseName(const char *filename){
-    const char* base_name = strrchr(filename, '/');
-    if (base_name != NULL) {
-        base_name++; // Move past the '/' character
-    } else {
-        base_name = filename; // No '/' found, use the original string
-    }
-    return base_name;
-}
 
 const char* generateRandomName(size_t length) {
     const std::string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -104,15 +97,12 @@ dir_test* createDirHierarchy(int level, int maxLevel) {
 
 // Setup function for the test directory
 void setupTestDirectory(dir_test** root) {
-    fprintf(stderr,"[%s ,%d]\n",__func__,__LINE__);
     // Allocate memory for root
     *root = new dir_test;
-    (*root)->name = strdup("/"); // Generate a random name for the directory
+    (*root)->name = strdup("/"); // use / as begin
     (*root)->inFile = nullptr; // Initialize file list to nullptr
-    fprintf(stderr,"[%s ,%d]\n",__func__,__LINE__);
     (*root)->subdir = createDirHierarchy(0, 1);
     (*root)->next = nullptr;
-    fprintf(stderr,"[%s ,%d]\n",__func__,__LINE__);
     file_test* fileHead = nullptr;
     file_test* fileCurrent = nullptr;
     for (int j = 0; j < 3; ++j) {
@@ -128,10 +118,6 @@ void setupTestDirectory(dir_test** root) {
         fileCurrent = newFile;
     }
     (*root)->inFile = fileHead;
-}
-void setupTestDirectory_1(dir_test** root) {
-
-    *root = createDirHierarchy(0, 1);
 }
 
 // Function to free a list of files
@@ -163,6 +149,7 @@ void printFileList(const file_test* fileList) {
     const file_test* currentFile = fileList;
     while (currentFile != nullptr) {
         // std::cout << "  File: " << currentFile->name << std::endl;
+        total_file_num++;
         currentFile = currentFile->next;
     }
 }
@@ -170,7 +157,7 @@ void printFileList(const file_test* fileList) {
 void traverseDirHierarchy(const dir_test* dir, int depth = 0) {
     while (dir != nullptr) {
         // std::cout << "Depth " << depth << ", Directory: " << dir->name << std::endl;
-        total_number++;//for debug
+        total_dir_num++;//for debug
 
         // Print files in this directory
         printFileList(dir->inFile);
@@ -187,7 +174,7 @@ TEST(DirTest, root_test) {
     INode inode_root;
     u_int64_t file_permissions = 0;
     inode_root.permissions = file_permissions | S_IFDIR;
-    root = fischl_init_entry(0, "/", &inode_root);//0 is inode number assigned by inode_allocate()
+    root = fischl_init_entry(0, mock_root->name, &inode_root);//0 is inode number assigned by inode_allocate()
 }
 TEST(DirTest, AddFile_test) {
     //assume file and dir itself(content,metadata) same,but different name and inode number
@@ -196,30 +183,30 @@ TEST(DirTest, AddFile_test) {
     u_int64_t file_permissions = 0;
     file_permissions = 0;
     inode_dir.permissions = file_permissions | S_IFDIR;
-    fischl_add_entry(root, 2, "file1",&inode_file);
-    fischl_add_entry(root, 3, "dir1",&inode_dir);
+    fischl_add_entry(root, 2, mock_root->inFile->name,&inode_file);
+    fischl_add_entry(root, 3, mock_root->subdir->name,&inode_dir);
 }
 TEST(DirTest, FindFile_test) {
     //find file
-    target_filepath = "/file1";
-    FileNode *get_file = fischl_find_entry(root,target_filepath);
+    target_filepath = std::string("/") + mock_root->inFile->name;
+    FileNode *get_file = fischl_find_entry(root,target_filepath.c_str());
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name, get_baseName(target_filepath));
+    EXPECT_STREQ(get_file->name, mock_root->inFile->name);
     //find dir
-    target_filepath = "/dir1/";
-    FileNode *get_dir = fischl_find_entry(root,target_filepath);
+    target_filepath = std::string("/") + mock_root->subdir->name + "/";
+    FileNode *get_dir = fischl_find_entry(root,target_filepath.c_str());
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
-    EXPECT_STREQ(get_dir->name, "dir1");
+    EXPECT_STREQ(get_dir->name, mock_root->subdir->name);
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
     //check . function
     get_dir = fischl_find_entry(root,"./");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
-    EXPECT_STREQ(get_dir->name, "/");
+    EXPECT_STREQ(get_dir->name, mock_root->name);
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
     //check .. function
     get_dir = fischl_find_entry(root,"..");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success
-    EXPECT_STREQ(get_dir->name, "/");
+    EXPECT_STREQ(get_dir->name, mock_root->name);
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
 }
 TEST(DirTest, Add_FindFile_test) {
@@ -233,75 +220,81 @@ TEST(DirTest, Add_FindFile_test) {
     /*add with subdirectory*/
     //Treenode dir(you cannot find here), you only can get Filenode dir based on fischl_find_entry Function
     //So use Filenode->subdirectory will point to the treenode dir, then can add files
-    FileNode *get_dir = fischl_find_entry(root,"/dir1/");  
-    fischl_add_entry(get_dir->subdirectory, 4, "file2",&inode_file);
+    target_filepath = std::string("/") + mock_root->subdir->name + "/";
+    FileNode *get_dir = fischl_find_entry(root, target_filepath.c_str());
+    fischl_add_entry(get_dir->subdirectory, 4, mock_root->subdir->inFile->name, &inode_file);
     
     //verfication treeNode and Filenode relationship
-    TreeNode *get_dir_tree = find_parentPath(root,"/dir1/file2");
+    target_filepath = std::string("/") + mock_root->subdir->name + "/" + mock_root->subdir->inFile->name;
+    TreeNode *get_dir_tree = find_parentPath(root,target_filepath.c_str());
     ASSERT_TRUE(get_dir_tree == get_dir->subdirectory);//treeNode dir should be same as treeNode subdir in that Filenode
  
     //two Ways to get File(include dir itself) information
     FileNode *get_file = NULL;
     //1. absolute path, the root(treeNode) will always exist when initialize
-    get_file = fischl_find_entry(root,"/dir1/file2");
+    get_file = fischl_find_entry(root,target_filepath.c_str());
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name,"file2");
-    //2. relative path, the get_dir1(FileNode)->subdirectory(treeNode), use treeNode(dir) to find 
-    get_file = fischl_find_entry(get_dir->subdirectory,"/file2");
+    EXPECT_STREQ(get_file->name,mock_root->subdir->inFile->name);
+    //2. relative path, the get_dir(FileNode)->subdirectory(treeNode), use treeNode(dir) to find
+    target_filepath = std::string("/") + mock_root->subdir->inFile->name;
+    get_file = fischl_find_entry(get_dir->subdirectory,target_filepath.c_str());
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name,"file2");
+    EXPECT_STREQ(get_file->name, mock_root->subdir->inFile->name);
     /**********************************************************/
-    //add one more file under dir1
-    fischl_add_entry(get_dir->subdirectory, 5, "file3",&inode_file);
-    //add one more directory under dir1
-    fischl_add_entry(get_dir->subdirectory, 6, "dir2", &inode_dir);
+    //add one more file under fist subdir
+    fischl_add_entry(get_dir->subdirectory, 5, mock_root->subdir->inFile->next->name, &inode_file);
+    //add one more directory under fist subdir
+    fischl_add_entry(get_dir->subdirectory, 6, mock_root->subdir->subdir->name, &inode_dir);
     //find
-    get_file = fischl_find_entry(get_dir->subdirectory,"./file3");
+    target_filepath = std::string("./") + mock_root->subdir->inFile->next->name;
+    get_file = fischl_find_entry(get_dir->subdirectory, target_filepath.c_str());
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name,"file3");
-    //use .. from dir1 to find file1 
-    get_file = fischl_find_entry(get_dir->subdirectory,"../file1");
+    EXPECT_STREQ(get_file->name, mock_root->subdir->inFile->next->name);
+    //use .. from fist subdir to find file1
+    target_filepath = std::string("../") + mock_root->inFile->name;
+    get_file = fischl_find_entry(get_dir->subdirectory,target_filepath.c_str());
     EXPECT_TRUE(get_file != NULL);
-    EXPECT_STREQ(get_file->name,"file1");
-    //check dir1 with .
+    EXPECT_STREQ(get_file->name,mock_root->inFile->name);
+    //check fist subdir with .
     get_dir = fischl_find_entry(get_dir->subdirectory,".");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success
-    EXPECT_STREQ(get_dir->name, "dir1");
+    EXPECT_STREQ(get_dir->name, mock_root->subdir->name);
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
-    //check root with dir1
+    //check root via fist subdir
     get_dir = fischl_find_entry(get_dir->subdirectory,"..");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success
-    EXPECT_STREQ(get_dir->name, "/");
+    EXPECT_STREQ(get_dir->name, mock_root->name);
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
     //use .. to access parent directory
-    get_dir = fischl_find_entry(root, "/dir1/dir2/..");
+    target_filepath = std::string("/") + mock_root->subdir->name + "/" + mock_root->subdir->subdir->name + "/..";
+    get_dir = fischl_find_entry(root, target_filepath.c_str());
     EXPECT_TRUE(get_dir != NULL);
-    EXPECT_STREQ(get_dir->name, "dir1");
-    FileNode *get_rootdir = fischl_find_entry(root, "/dir1/dir2/../..");
-    EXPECT_TRUE(get_rootdir != NULL);
-    EXPECT_STREQ(get_rootdir->name, "/");
-    EXPECT_TRUE(get_rootdir->subdirectory != NULL);
-    EXPECT_TRUE(get_rootdir->subdirectory->self_info == get_rootdir);
+    EXPECT_STREQ(get_dir->name, mock_root->subdir->name);
+    target_filepath = std::string("/") + mock_root->subdir->name + "/" + mock_root->subdir->subdir->name + "/../..";
+    get_file = fischl_find_entry(root, target_filepath.c_str());
+    EXPECT_TRUE(get_file != NULL);
+    EXPECT_STREQ(get_file->name, mock_root->name);
+    EXPECT_TRUE(get_file->subdirectory != NULL);
+    EXPECT_TRUE(get_file->subdirectory->self_info == get_file);
 }
 
 int main(int argc, char **argv) {
     srand(time(NULL)); // Seed the random number generator
     d = (argc < 2) ? "/dev/vdc" : argv[1];
 
-    dir_test* mock_root = nullptr;
     setupTestDirectory(&mock_root);
 
     ::testing::InitGoogleTest(&argc, argv);
     int result = RUN_ALL_TESTS();
 
-    total_number = 0;
+    total_dir_num = 0;
+    total_file_num = 0;
     traverseDirHierarchy(mock_root);//mock_root
-    printf("Traverse Dir total %d\n",total_number);
+    printf("Traverse Total: Dir %d, File %d\n",total_dir_num, total_file_num);
     
     // Cleanup
     freeDirHierarchy(mock_root);//mock_root
-    printf("Free Dir total %d\n",total_free_dir);
-    printf("Free File total %d\n",total_free_file);
+    printf("Free Total: Dir %d, File %d\n",total_free_dir, total_free_file);
     freeTree(root);
     return result;
 }
