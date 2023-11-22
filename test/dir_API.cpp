@@ -99,6 +99,8 @@ TEST(DirTest, Add_FindFile_test) {
     /**********************************************************/
     //add one more file under dir1
     fischl_add_entry(get_dir->subdirectory, 5, "file3",&inode_file);
+    //add one more directory under dir1
+    fischl_add_entry(get_dir->subdirectory, 6, "dir2", &inode_dir);
     //find
     get_file = fischl_find_entry(get_dir->subdirectory,"./file3");
     EXPECT_TRUE(get_file != NULL);
@@ -117,6 +119,15 @@ TEST(DirTest, Add_FindFile_test) {
     EXPECT_TRUE(get_dir != NULL);//detect this should find success
     EXPECT_STREQ(get_dir->name, "/");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    //use .. to access parent directory
+    get_dir = fischl_find_entry(root, "/dir1/dir2/..");
+    EXPECT_TRUE(get_dir != NULL);
+    EXPECT_STREQ(get_dir->name, "dir1");
+    FileNode *get_rootdir = fischl_find_entry(root, "/dir1/dir2/../..");
+    EXPECT_TRUE(get_rootdir != NULL);
+    EXPECT_STREQ(get_rootdir->name, "/");
+    EXPECT_TRUE(get_rootdir->subdirectory != NULL);
+    EXPECT_TRUE(get_rootdir->subdirectory->self_info == get_rootdir);
 }
 
 int main(int argc, char **argv) {
