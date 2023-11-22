@@ -278,6 +278,56 @@ TEST(DirTest, Add_FindFile_test) {
     EXPECT_TRUE(get_file->subdirectory->self_info == get_file);
 }
 
+// TEST(DirTest, Scale_test){
+//     INode inode_file;
+//     INode inode_dir;
+//     u_int64_t file_permissions = 0;
+//     file_permissions = 0;
+//     inode_dir.permissions = file_permissions | S_IFDIR;
+//     dir_test* temp = mock_root;
+//     // First loop: Add files and subdirectories under root
+//     file_test* currentFile = temp->inFile;
+//     dir_test* currentSubdir = temp->subdir;
+//
+//     for (int i = 1; i < 7; ++i) {
+//         if (currentFile) {
+//             //add can still add the same filename and dir name, but it will be linked behind the first added
+//             fischl_add_entry(root, i, currentFile->name, &inode_file);
+//             currentFile = currentFile->next;
+//         }
+//         if (currentSubdir) {
+//             fischl_add_entry(root, i + 1, currentSubdir->name, &inode_dir);
+//             currentSubdir = currentSubdir->next;
+//         }
+//     }
+
+//     // Second loop: Process each subdir under root
+//     temp = mock_root->subdir;
+//     while (temp) {
+//         target_filepath = "/" + std::string(temp->name) + "/";
+//         FileNode* get_dir = fischl_find_entry(root, target_filepath.c_str());
+
+//         ASSERT_TRUE(get_dir != NULL);
+//         EXPECT_STREQ(get_dir->name, temp->name);
+//         ASSERT_TRUE(get_dir->subdirectory != NULL);
+//         // Add files and subdirectories in each subdir
+//         file_test* currentFile = temp->inFile;
+//         dir_test* currentSubSubdir = temp->subdir;
+//         for (int j = 7; j < 13; ++j) {
+//             if (currentFile) {
+//                 fischl_add_entry(get_dir->subdirectory, j, currentFile->name, &inode_file);
+//                 currentFile = currentFile->next;
+//             }
+//             if (currentSubSubdir) {
+//                 fischl_add_entry(get_dir->subdirectory, j + 1, currentSubSubdir->name, &inode_dir);
+//                 currentSubSubdir = currentSubSubdir->next;
+//             }
+//         }
+
+//         temp = temp->next; // Move to next subdir
+//     }
+// }
+
 int main(int argc, char **argv) {
     srand(time(NULL)); // Seed the random number generator
     d = (argc < 2) ? "/dev/vdc" : argv[1];
