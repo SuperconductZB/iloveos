@@ -13,7 +13,6 @@ int main(int argc, char *argv[]) {
     fsop.initialize_rootinode();
     
     // create multiple files using mkdir or mknod
-    // directories that contain more than 64 files use more than one datablocks, it is not supported yet
     printf("=== Part 1: create files by path ===\n");
     u_int64_t file1 = fsop.fischl_mknod("/test",0); // mode here is not used yet
     printf("/test is inode %llu, it is a file\n", file1);
@@ -113,4 +112,9 @@ int main(int argc, char *argv[]) {
         assert(inode_number == inode_numbers[i]);
     }
     fsop.printDirectory(file_pressure);
+
+    // long filename test
+    std::string longfilename = std::string(255,'A');
+    u_int64_t filelong = fsop.fischl_mknod((std::string("/")+longfilename).c_str(),0);
+    printf("/AAA...AAA is inode %llu, it is a file\n", filelong);
 }

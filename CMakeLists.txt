@@ -15,6 +15,7 @@ add_executable(fischl
   lib/fischl.cpp
   lib/main.cpp
   lib/files.cpp
+  lib/direntry.cpp
 
 )
 

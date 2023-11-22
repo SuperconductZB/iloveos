@@ -1,10 +1,11 @@
 #include <sys/types.h>
 #include <fs.h>
+#include "direntry.h"
 
 class FilesOperation {
     RawDisk& disk;
     INodeOperation inop;
-    u_int64_t root_inode;
+    TreeNode *root_node;
     INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
     void create_dot_dotdot(INode*, u_int64_t);
     public:
@@ -13,8 +14,9 @@ class FilesOperation {
     int write_datablock(INode& inode, u_int64_t index, const char* buffer);
     void initialize_rootinode();
     void printDirectory(u_int64_t);
-    u_int64_t create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
+    INode* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     void unlink_inode(u_int64_t inode_number);
+    u_int64_t disk_namei(const char* path);
     u_int64_t namei(const char* path);
     u_int64_t fischl_mkdir(const char*, mode_t);
     u_int64_t fischl_mknod(const char*, mode_t);
