@@ -18,6 +18,7 @@
 
 #define INODE_SIZE 512
 
-#define DATABLOCKS_PER_BITMAP_BLOCK 255
+// TODO: explore the optimal value for this
+#define DATABLOCKS_PER_BITMAP_BLOCK 2047
 
 #endif
