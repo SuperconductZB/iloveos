@@ -54,59 +54,64 @@ TEST(FileOperationTest, MkdirnodTest) {
     EXPECT_TRUE(fsop->fischl_mkdir("/foo/bar/..", mode) < 0);
 }
 
-// TEST(FileOperationTest, WriteTest) {
-//     // write to files (TODO: fischl_write)
-//     // read and write to indirect datablocks are not supported yet
-//     printf("=== Part 2: write to files ===\n");
-//     char buffer[IO_BLOCK_SIZE] = {0};
-//     INode inode;
-//     inode.inode_construct(file1, *H);
-//     buffer[0] = '1';
-//     fsop.write_datablock(inode, 0, buffer);
-//     inode.inode_save(*H);
-//     inode.inode_construct(file4, *H);
-//     buffer[0] = '4';
-//     fsop.write_datablock(inode, 3, buffer);
-//     buffer[0] = '5';
-//     fsop.write_datablock(inode, 101, buffer);
-//     inode.inode_save(*H);
-//     // TODO: guard against overwriting directory datablocks
-// }
+TEST(FileOperationTest, WriteTest) {
+    // write to files (TODO: fischl_write)
+    // read and write to indirect datablocks are not supported yet
+    //get inode info from disk
+    char buffer[IO_BLOCK_SIZE] = {0};
+    INode inode;
+    u_int64_t get_disk_inum;
+    //file test
+    get_disk_inum = fsop->disk_namei("/test");
+    inode.inode_construct(get_disk_inum, *H);
+    buffer[0] = '1';
+    fsop->write_datablock(inode, 0, buffer);
+    inode.inode_save(*H);
+    //other file baz
+    get_disk_inum = fsop->disk_namei("/foo/bar/baz");
+    inode.inode_construct(get_disk_inum, *H);
+    buffer[0] = '4';
+    fsop->write_datablock(inode, 3, buffer);
+    buffer[0] = '5';
+    fsop->write_datablock(inode, 101, buffer);
+    inode.inode_save(*H);
+    // TODO: guard against overwriting directory datablocks
+}
 
-TEST(FileOperationTest, RamTest) {
+TEST(FileOperationTest, RamDiskTest) {
     //use find_entry(specify certain files or directory)
     FileNode* get_dir;
+    u_int64_t get_disk_inum;
+    
     get_dir = fischl_find_entry(fsop->root_node, "/test");//this is file
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "test");
+    get_disk_inum = fsop->disk_namei("/test");
+    EXPECT_EQ(get_disk_inum, get_dir->inode_number);
+
     get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/baz");//this is file
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "baz");
+    get_disk_inum = fsop->disk_namei("/foo/bar/baz");
+    EXPECT_EQ(get_disk_inum, get_dir->inode_number);
+
     get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/..");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "foo");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    get_disk_inum = fsop->disk_namei("/foo/bar/..");
+    EXPECT_EQ(get_disk_inum, get_dir->inode_number);
+    fsop->printDirectory(get_disk_inum);
+
     get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/.");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "bar");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    get_disk_inum = fsop->disk_namei("/foo/bar/.");
+    EXPECT_EQ(get_disk_inum, get_dir->inode_number);
+    fsop->printDirectory(get_disk_inum);
 }
 
-// TEST(FileOperationTest, DiskTest) {
-//     // retrieve inode-number by path
-//     u_int64_t file_test = fsop.namei("/test");
-//     printf("inode number for \"/test\" is %llu\n", file_test);
-//     assert(file_test == file1);
-//     u_int64_t file_baz = fsop.namei("/foo/bar/baz");
-//     printf("inode number for \"/foo/bar/baz\" is %llu\n", file_baz);
-//     assert(file_baz == file4);
-//     u_int64_t file_foo = fsop.namei("/foo/bar/..");
-//     printf("inode number for \"/foo/bar/..\" is %llu\n", file_foo);
-//     assert(file_foo == file2);
-//     u_int64_t file_bar = fsop.namei("/foo/bar/.");
-//     printf("inode number for \"/foo/bar/.\" is %llu\n", file_bar);
-//     assert(file_bar == file3);
-// }
 
 // TEST(FileOperationTest, ReadTest) {
 //     // read files (TODO: fischl_read)
