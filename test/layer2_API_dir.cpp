@@ -24,10 +24,10 @@ void freeDirHierarchy(dir_test* dir);
 void traverseDirHierarchy(const dir_test* dir, int depth);
 
 //global can be taken
-const char* d;
-TreeNode *root;
 std::string target_filepath;
 dir_test* mock_root = nullptr;
+RawDisk *H;
+FilesOperation *fsop;
 
 int total_dir_num = 0;
 int total_file_num = 0;
@@ -35,25 +35,23 @@ int total_free_dir = 0;
 int total_free_file = 0;
 
 TEST(FileOperationTest, MkdirnodTest) {
-    RawDisk *H = new RawDisk(d);
 
-    FilesOperation fsop(*H);
-    fsop.initialize_rootinode();
+    fsop->initialize_rootinode();
     
     mode_t mode;//set mode
     mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
     //S_IRWXU(S_IRUSR | S_IWUSR | S_IXUSR) (owner), S_IRWXG(S_IRGRP | S_IWGRP | S_IXGRP) (group), S_IRWXO(S_IROTH | S_IWOTH | S_IXOTH)
-    EXPECT_EQ(fsop.fischl_mknod("/test", mode), 0); // mode here is not used yet
-    EXPECT_EQ(fsop.fischl_mkdir("/foo", mode), 0);
-    EXPECT_EQ(fsop.fischl_mkdir("/foo/bar", mode),0);
-    EXPECT_EQ(fsop.fischl_mknod("/foo/bar/baz", mode), 0);
+    EXPECT_EQ(fsop->fischl_mknod("/test", mode), 0); // mode here is not used yet
+    EXPECT_EQ(fsop->fischl_mkdir("/foo", mode), 0);
+    EXPECT_EQ(fsop->fischl_mkdir("/foo/bar", mode),0);
+    EXPECT_EQ(fsop->fischl_mknod("/foo/bar/baz", mode), 0);
     // the following three testcases will fail
-    EXPECT_TRUE(fsop.fischl_mkdir("foo/bar", mode) < 0);
-    EXPECT_TRUE(fsop.fischl_mkdir("/doesnt_exist/bar", mode) < 0);
-    EXPECT_TRUE(fsop.fischl_mkdir("/test/bar", mode) < 0);
-    EXPECT_TRUE(fsop.fischl_mkdir("/test", mode) < 0);
-    EXPECT_TRUE(fsop.fischl_mkdir("/foo/bar", mode) < 0);
-    EXPECT_TRUE(fsop.fischl_mkdir("/foo/bar/..", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("foo/bar", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("/doesnt_exist/bar", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("/test/bar", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("/test", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("/foo/bar", mode) < 0);
+    EXPECT_TRUE(fsop->fischl_mkdir("/foo/bar/..", mode) < 0);
 }
 
 // TEST(FileOperationTest, WriteTest) {
@@ -75,21 +73,24 @@ TEST(FileOperationTest, MkdirnodTest) {
 //     // TODO: guard against overwriting directory datablocks
 // }
 
-// TEST(FileOperationTest, RamTest) {
-//     // retrieve inode-number by path
-//     u_int64_t file_test = fsop.namei("/test");
-//     printf("inode number for \"/test\" is %llu\n", file_test);
-//     assert(file_test == file1);
-//     u_int64_t file_baz = fsop.namei("/foo/bar/baz");
-//     printf("inode number for \"/foo/bar/baz\" is %llu\n", file_baz);
-//     assert(file_baz == file4);
-//     u_int64_t file_foo = fsop.namei("/foo/bar/..");
-//     printf("inode number for \"/foo/bar/..\" is %llu\n", file_foo);
-//     assert(file_foo == file2);
-//     u_int64_t file_bar = fsop.namei("/foo/bar/.");
-//     printf("inode number for \"/foo/bar/.\" is %llu\n", file_bar);
-//     assert(file_bar == file3);
-// }
+TEST(FileOperationTest, RamTest) {
+    //use find_entry(specify certain files or directory)
+    FileNode* get_dir;
+    get_dir = fischl_find_entry(fsop->root_node, "/test");//this is file
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "test");
+    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/baz");//this is file
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "baz");
+    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/..");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "foo");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/.");
+    EXPECT_TRUE(get_dir != NULL);//detect this should find success 
+    EXPECT_STREQ(get_dir->name, "bar");
+    ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
+}
 
 // TEST(FileOperationTest, DiskTest) {
 //     // retrieve inode-number by path
@@ -166,9 +167,11 @@ TEST(FileOperationTest, MkdirnodTest) {
 
 int main(int argc, char **argv) {
     srand(time(NULL)); // Seed the random number generator
-    d = (argc < 2) ? "/dev/vdc" : argv[1];
+    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
     setupTestDirectory(&mock_root);
+    H = new RawDisk(d);
+    fsop = new FilesOperation(*H);
 
     ::testing::InitGoogleTest(&argc, argv);
     int result = RUN_ALL_TESTS();
@@ -182,7 +185,11 @@ int main(int argc, char **argv) {
     // Cleanup
     freeDirHierarchy(mock_root);//mock_root
     printf("Free Total: Dir %d, File %d\n",total_free_dir, total_free_file);
-    freeTree(root);
+    
+    freeTree(fsop->root_node);
+    delete fsop; // First delete fsop which depends on H
+    delete H;
+
     return result;
 }
 

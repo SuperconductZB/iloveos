@@ -5,10 +5,11 @@
 class FilesOperation {
     RawDisk& disk;
     INodeOperation inop;
-    TreeNode *root_node;
     INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
     void create_dot_dotdot(INode*, u_int64_t);
+
     public:
+    TreeNode *root_node;
     FilesOperation(RawDisk&);
     int read_datablock(const INode& inode, u_int64_t index, char* buffer);
     int write_datablock(INode& inode, u_int64_t index, const char* buffer);
