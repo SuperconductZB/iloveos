@@ -1,0 +1,63 @@
+Problem - no header guards 
+Problem - code in header file
+Problem - inconisitent use of SECTOR_SIZE IO_BLOCK_SIZE
+
+
+?18: what is directory
+
+22: read of less than sector-size unpermitted
+
+?25: does the casting here work as expected, would a bitmask be better
+
+Question: why are we passing a disk every time to superblock functions, shouldn't that be associated with the superblock (i.e. the file system object) 
+
+37: same issues with this function
+
+Superblock should be read and written to all at once to avoid unneccary io reads and should be stateful regarding the fs data (also it maybe good to rename superblock to fs and make it in charge of formatting the fs)
+
+57: magic num
+
+?69: strange reference pattern with current_pos - usually handled by func returning num bytes read
+
+?69: should these helper functions be in the inode at all
+
+?76: these two funcs could be combined together
+
+?83: inode_construct may want to be named inode_load to fit pattern
+
+inode objs (block_number) should likely be able to be made with out the use of inode_construct when they are first created 
+
+
+132:
+
+?142: odd use of block nums - byte addresses and io_block addresses
+
+143: magic num 32?
+
+?144: possibly make this a continue also use 0b11111111 and 0b01111111
+
+?145: j = 0 twice
+
+?76: why is this function read_byte_at if it reads 8 bytes
+
+?144: why is the last bit of the bitmask unused
+
+?171: returned free must be zeroed before use
+
+177: no error handling for cannot allocate block (free list empty)
+
+?215: should this be made into a recursive func
+
+241: no error checking
+
+278: the empty checking and adding to free list head seems busted
+
+303: --
+
+?315: && addr == 0 does nothing
+
+398: can try to deallocate the super block so // deal with empty needs implementation
+
+?433: why even mix sector size into free list
+
+428: no limit checking

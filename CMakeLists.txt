@@ -10,9 +10,15 @@ include_directories(
 
 add_executable(fischl
 
-  # Header files
   lib/fischl.cpp
   lib/main.cpp
+  lib/rawdisk.cpp
+  lib/fs/datablock_manager.cpp
+  lib/fs/fs_data_types.cpp
+  lib/fs/fs_resize.cpp
+  lib/fs/fs_read_write.cpp
+  lib/fs/fs.cpp
+  lib/fs/inode_manager.cpp
 
 )
 
