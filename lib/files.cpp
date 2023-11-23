@@ -111,7 +111,7 @@ void FilesOperation::create_dot_dotdot(INode* inode, u_int64_t parent_inode_numb
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     u_int64_t root_inode_number = inop.inode_allocate(disk);
-    printf("Info: root inode number: %llu\n", root_inode_number);
+    // printf("Info: root inode number: %llu\n", root_inode_number);
     INode *root_inode = new_inode(root_inode_number, S_IFDIR);
     create_dot_dotdot(root_inode, root_inode_number);
     root_node = fischl_init_entry(root_inode_number, "/", root_inode);
@@ -142,7 +142,7 @@ INode* FilesOperation::create_new_inode(u_int64_t parent_inode_number, const cha
     INode inode;
     inode.inode_construct(parent_inode_number, disk);
     if ((inode.permissions & S_IFMT) != S_IFDIR) {
-        printf("Parent Inode is not a directory\n");
+        fprintf(stderr,"[%s ,%d] please create under directory\n",__func__,__LINE__);
         return NULL;
     }
 
@@ -154,7 +154,11 @@ INode* FilesOperation::create_new_inode(u_int64_t parent_inode_number, const cha
         for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
             ent.deserialize(r_buffer+i);
             if (strcmp(ent.file_name, name)==0) {
-                printf("Already exists file or directory with name %s, cannot not create\n", name);
+                if((mode & S_IFMT) == S_IFDIR){
+                    fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
+                }else{
+                    fprintf(stderr,"[%s ,%d] %s already exists\n",__func__,__LINE__, name);
+                }                  
                 return NULL;
             }
         }
@@ -255,7 +259,7 @@ u_int64_t FilesOperation::namei(const char* path) {
     else return -1;
 }
 
-u_int64_t FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
+int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
     //check path
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
@@ -265,44 +269,41 @@ u_int64_t FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
 
     FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
-        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         delete pathdup;
-        return -1;
+        return -ENOENT;//parentpath directory does not exist
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
     //make new inode
     INode* ret = create_new_inode(parent_inode_number, newDirname, mode|S_IFDIR);//specify S_IFDIR as directory
-    if (ret == NULL) return -1;
+    if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
     fischl_add_entry(parent_filenode->subdirectory, ret->block_number, newDirname, ret);
     delete pathdup;
-    return ret->block_number;
-    //after new_inode(mkfile), go to fischl_add_entry record
-
-    
+    return 0;//SUCCESS
 }
 
-u_int64_t FilesOperation::fischl_mknod(const char* path, mode_t mode) {
+int FilesOperation::fischl_mknod(const char* path, mode_t mode) {
     //check path
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
     *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
     char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
-    printf("mknod ParentPath:%s, strlen=%d\n", ParentPath, strlen(ParentPath));
+    // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
     FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
-        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         delete pathdup;
         return -1;
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
     //make new inode
     INode* ret = create_new_inode(parent_inode_number, newFilename, mode);
-    if (ret == NULL) return -1;
+    if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
     //make new node
     fischl_add_entry(parent_filenode->subdirectory, ret->block_number, newFilename, ret);
     delete pathdup;
-    return ret->block_number;
+    return 0;//SUCESS
 }
 
 void FilesOperation::unlink_inode(u_int64_t inode_number) {
