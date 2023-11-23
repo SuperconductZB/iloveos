@@ -82,7 +82,7 @@ TEST(FileOperationTest, RamDiskTest) {
     //use find_entry(specify certain files or directory)
     FileNode* get_dir;
     u_int64_t get_disk_inum;
-    
+
     get_dir = fischl_find_entry(fsop->root_node, "/test");//this is file
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "test");
@@ -113,32 +113,41 @@ TEST(FileOperationTest, RamDiskTest) {
 }
 
 
-// TEST(FileOperationTest, ReadTest) {
-//     // read files (TODO: fischl_read)
-//     char read_buffer[IO_BLOCK_SIZE] = {0};
-//     INode inode_read;
-//     inode_read.inode_construct(file_test, *H);
-//     fsop.read_datablock(inode_read, 0, read_buffer);
-//     assert(read_buffer[0] == '1');
-//     inode_read.inode_construct(file_baz, *H);
-//     fsop.read_datablock(inode_read, 3, read_buffer);
-//     assert(read_buffer[0] == '4');
-//     fsop.read_datablock(inode_read, 101, read_buffer);
-//     assert(read_buffer[0] == '5');
-// }
-// TEST(FileOperationTest, PressureTest) {
-//     printf("=== Part 5: pressure test create files ===\n");
-//     u_int64_t file_pressure = fsop.fischl_mkdir("/pressure", 0);
-//     u_int64_t inode_numbers[700];
-//     std::string prefix = "/pressure/No_";
-//     for(int i=0;i<700;i++){
-//         inode_numbers[i] = fsop.fischl_mkdir((prefix+std::to_string(i)).c_str(), 0);
-//     }
-//     for(int i=0;i<700;i++){
-//         u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
-//         assert(inode_number == inode_numbers[i]);
-//     }
-// }
+TEST(FileOperationTest, ReadTest) {
+    // read files (TODO: fischl_read)
+    char read_buffer[IO_BLOCK_SIZE] = {0};
+    INode inode;
+    u_int64_t get_file_inum;
+
+    //read test file
+    get_file_inum = fsop->namei("/test");
+    inode.inode_construct(get_file_inum, *H);
+    fsop->read_datablock(inode, 0, read_buffer);
+    EXPECT_EQ(read_buffer[0], '1');
+
+    //read baz file
+    get_file_inum= fsop->namei("/foo/bar/baz");
+    inode.inode_construct(get_file_inum, *H);
+    fsop->read_datablock(inode, 3, read_buffer);
+    EXPECT_EQ(read_buffer[0], '4');
+    fsop->read_datablock(inode, 101, read_buffer);
+    EXPECT_EQ(read_buffer[0], '5');
+}
+
+TEST(FileOperationTest, PressureTest) {
+    mode_t mode;//set mode
+    mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
+    EXPECT_EQ(fsop->fischl_mkdir("/pressure", mode), 0);
+
+    u_int64_t inode_numbers[700];
+    std::string prefix = "/pressure/No_";
+    for(int i=0;i<700;i++){
+        EXPECT_EQ(fsop->fischl_mkdir((prefix+std::to_string(i)).c_str(), mode), 0);
+    }
+    for(int i=0;i<700;i++){
+        EXPECT_EQ(fsop->namei((prefix+std::to_string(i)).c_str()),fsop->disk_namei((prefix+std::to_string(i)).c_str()));
+    }
+}
 // TEST(FileOperationTest, UnlinkTest) {
 //     printf("=== Part 6: unlink test ===\n");
 //     fsop.printDirectory(file_pressure);
