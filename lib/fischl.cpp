@@ -38,7 +38,7 @@ static void show_help(const char *progname)
 	       "\n");
 }
 
-int main(int argc, char *argv[])
+int fischl::init(int argc, char *argv[])
 {
 	int ret;
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
