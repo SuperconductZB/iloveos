@@ -281,8 +281,10 @@ int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
     delete pathdup;
     return 0;//SUCCESS
 }
-
-int FilesOperation::fischl_mknod(const char* path, mode_t mode) {
+/*
+    special file
+*/
+int FilesOperation::fischl_mknod(const char* path, mode_t mode, dev_t dev) {
     //check path
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
@@ -302,6 +304,34 @@ int FilesOperation::fischl_mknod(const char* path, mode_t mode) {
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
     //make new node
     fischl_add_entry(parent_filenode->subdirectory, ret->block_number, newFilename, ret);
+    delete pathdup;
+    return 0;//SUCESS
+}
+/*
+    regular file
+*/
+int FilesOperation::fischl_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
+    //check path
+    char *pathdup = strdup(path);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+    // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    if (parent_filenode == NULL) {
+        fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
+        delete pathdup;
+        return -1;
+    }
+    u_int64_t parent_inode_number = parent_filenode->inode_number;
+    //make new inode
+    INode* ret = create_new_inode(parent_inode_number, newFilename, mode);
+    if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
+    //make new node in RAM
+    fischl_add_entry(parent_filenode->subdirectory, ret->block_number, newFilename, ret);
+    //directly give inode number rather than create file descriptor table
+    fi->fh = ret->block_number;//assign file descriptor as inode number to fuse system
     delete pathdup;
     return 0;//SUCESS
 }

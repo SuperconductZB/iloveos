@@ -37,14 +37,15 @@ int total_free_file = 0;
 TEST(FileOperationTest, MkdirnodTest) {
 
     fsop->initialize_rootinode();
-    
+    struct fuse_file_info fi;
+
     mode_t mode;//set mode
     mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
     //S_IRWXU(S_IRUSR | S_IWUSR | S_IXUSR) (owner), S_IRWXG(S_IRGRP | S_IWGRP | S_IXGRP) (group), S_IRWXO(S_IROTH | S_IWOTH | S_IXOTH)
-    EXPECT_EQ(fsop->fischl_mknod("/test", mode), 0); // mode here is not used yet
+    EXPECT_EQ(fsop->fischl_create("/test", mode, &fi), 0); // mode here is not used yet
     EXPECT_EQ(fsop->fischl_mkdir("/foo", mode), 0);
     EXPECT_EQ(fsop->fischl_mkdir("/foo/bar", mode),0);
-    EXPECT_EQ(fsop->fischl_mknod("/foo/bar/baz", mode), 0);
+    EXPECT_EQ(fsop->fischl_create("/foo/bar/baz", mode, &fi), 0);
     // the following three testcases will fail
     EXPECT_TRUE(fsop->fischl_mkdir("foo/bar", mode) < 0);
     EXPECT_TRUE(fsop->fischl_mkdir("/doesnt_exist/bar", mode) < 0);
