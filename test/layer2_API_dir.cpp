@@ -126,6 +126,13 @@ TEST(FileOperationTest, ReadTest) {
     fsop->read_datablock(inode, 0, read_buffer);
     EXPECT_EQ(read_buffer[0], '1');
 
+    //read test file again with fischl_read API
+    struct fuse_file_info fi;
+    fsop->fischl_open("/test", &fi);
+    EXPECT_EQ(fi.fh, get_file_inum);
+    fsop->fischl_read("/test", read_buffer, sizeof(read_buffer), 0, &fi);
+    EXPECT_EQ(read_buffer[0], '1');
+
     //read baz file
     get_file_inum= fsop->namei("/foo/bar/baz");
     inode.inode_construct(get_file_inum, *H);

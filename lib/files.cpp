@@ -412,3 +412,85 @@ int FilesOperation::fischl_unlink(const char* path) {
         return -1;
     }
 }
+
+int FilesOperation::fischl_open(const char *path, struct fuse_file_info *fi){
+    /*Creation (O_CREAT, O_EXCL, O_NOCTTY) flags will be filtered out / handled by the kernel. 
+     if no files will use create function
+    */
+    FileNode *get_file;
+    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+        return -ENOENT;
+    //if need to do with flag fi->flags ((fi->flags & O_ACCMODE)). Initial setting ALL access
+    //create function will handle file descriptor fi->fh
+    fi->fh = get_file->inode_number;
+    return 0;//SUCESS
+}
+
+int FilesOperation::fischl_release(const char *path, struct fuse_file_info *fi){
+    /*Creation (O_CREAT, O_EXCL, O_NOCTTY) flags will be filtered out / handled by the kernel. 
+     if no files will use create function
+    */
+    FileNode *get_file;
+    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+        return -ENOENT;
+    //do with file descriptor that cannot be used
+    fi->fh = -1;
+    return 0;//SUCESS
+}
+
+int FilesOperation::fischl_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+    /** Write data to an open file
+	 *
+	 * Write should return exactly the number of bytes requested
+	 * except on error.	 An exception to this is when the 'direct_io'
+	 * mount option is specified (see read operation).
+	 *
+	 * Unless FUSE_CAP_HANDLE_KILLPRIV is disabled, this method is
+	 * expected to reset the setuid and setgid bits.
+	 */
+    // use path for debug, filedescriptor is enough
+    // FileNode *get_file;
+    // if((get_file = fischl_find_entry(root_node, path)) == NULL)
+    //     return -ENOENT;
+
+    return size;
+}
+
+int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+    /** Read data from an open file
+	 *
+	 * Read should return exactly the number of bytes requested except
+	 * on EOF or error, otherwise the rest of the data will be
+	 * substituted with zeroes.	 An exception to this is when the
+	 * 'direct_io' mount option is specified, in which case the return
+	 * value of the read system call will reflect the return value of
+	 * this operation.
+	 */
+    // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
+    // based on current read_datablock API implement, when read_datablock pass with actual size not index this function should be fixed 
+    INode inode;
+    // Assuming inode is correctly initialized here based on 'path'
+    inode.inode_construct(fi->fh, disk);
+    size_t len = inode.size * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
+
+    if (offset >= len) return 0;  // Offset is beyond the end of the file
+    if (offset + size > len) size = len - offset;  // Adjust size if it goes beyond EOF
+
+    size_t bytes_read = 0;
+    size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
+    size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
+    // fprintf(stderr,"[%s ,%d] inode.size %d\n",__func__,__LINE__, inode.size);
+    while (bytes_read < size && block_index < inode.size) {
+        char block_buffer[IO_BLOCK_SIZE];  // Temporary buffer for each block
+        read_datablock(inode, block_index, block_buffer);
+        // fprintf(stderr,"[%s ,%d] block_index %d\n",__func__,__LINE__, block_index);
+        size_t copy_size = std::min(size - bytes_read, IO_BLOCK_SIZE - block_offset);
+        memcpy(buf + bytes_read, block_buffer + block_offset, copy_size);
+        // fprintf(stderr,"[%s ,%d] buf %s, block_buffer %s\n",__func__,__LINE__, buf, block_buffer);
+        bytes_read += copy_size;
+        block_index++;
+        block_offset = 0;  // Only the first block might have a non-zero offset
+    }
+
+    return bytes_read;  // Return the actual number of bytes read
+}
