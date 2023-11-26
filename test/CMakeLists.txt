@@ -8,10 +8,21 @@ set(DIR_PLACE /dev/vdb)
 add_executable(${TARGET_LAYER0}
     # add need lib and source code here
     layer0.cpp
+
+    ../lib/rawdisk.cpp
+
 )
 add_executable(${TARGET_LAYER1_API}
     # add need lib and source code here
     layer1_API.cpp
+
+    ../lib/fischl.cpp
+    ../lib/rawdisk.cpp
+    ../lib/fs/datablock_manager.cpp
+    ../lib/fs/fs_data_types.cpp
+    ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs.cpp
+    ../lib/fs/inode_manager.cpp
 )
 add_executable(${TARGET_LAYER2_API}
     ../lib/direntry.cpp

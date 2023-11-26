@@ -1,33 +1,32 @@
-#include <gtest/gtest.h>
-#include "rawdisk.h"
-const char* d;
-TEST(RawDiskTest, WriteReadTest) {
-    RawDisk *H = new RawDisk(d);
+#include "rawdisk.hpp"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
-    char *buf = "iloveosdfjlseirfnerig";
-    char readBuffer[512] = {0};
+int main(int argc, char *argv[]) {
+  const char *d = (argc < 2) ? "/dev/vdc" : argv[1];
 
-    // Write test
-    for(u_int64_t i = 0; i < 10; i++) {
-        H->rawdisk_write(i*512, buf, strlen(buf));
-    }
+  RawDisk *H = new RealRawDisk(d);
 
-    // Read and verify test
-    for(u_int64_t i = 0; i < 10; i++) {
-        H->rawdisk_read(i*512, readBuffer, sizeof(readBuffer));
-        EXPECT_EQ(strncmp(readBuffer, buf, strlen(buf)), 0);
-    }
+  char *buf = "iloveosdfjlseirfnerig";
+  char readBuffer[IO_BLOCK_SIZE] = {0}; // Initialize to zeros
 
-    delete H;
-}
+  // printf("dir %s, numSectors %lld, diskSize %lld \n", H->dir, H->numSectors,
+  // H->diskSize);
 
-TEST(RawDiskTest, AssertionFailureTest) {
-    EXPECT_EQ(2, 3);  // Intentional failure
-    EXPECT_EQ(4, 1);  // Another intentional failure
-}
+  // use number to substitute H->getnumSector(), getnumSectors() are not yest
+  // implemented
+  for (u_int64_t i = 0; i < 10; i++) {
+    H->write_block(i, buf); // Change write_API
+  }
+  // use number to substitute H->getnumSector(), getnumSectors() are not yest
+  // implemented
+  for (u_int64_t i = 0; i < 10; i++) {
+    H->read_block(i, readBuffer); // Change read_API
+    assert(strncmp(readBuffer, buf, strlen(buf)) == 0);
+  }
 
-int main(int argc, char **argv) {
-    d = (argc < 2) ? "/dev/vdc" : argv[1];//how to do with this?
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+  delete H; // Delete the RawDisk object
+
+  return 0;
 }
