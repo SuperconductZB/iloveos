@@ -467,14 +467,12 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         size_t copy_size = std::min(size - bytes_write, IO_BLOCK_SIZE - block_offset);
         memcpy(block_buffer + block_offset, buf + bytes_write, copy_size);
         write_datablock(inode, block_index, block_buffer);
-        fprintf(stderr,"[%s ,%d] inode.size %d\n",__func__,__LINE__, inode.size);
-        fprintf(stderr,"[%s ,%d] block_index %d\n",__func__,__LINE__, block_index);
-        fprintf(stderr,"[%s ,%d] buf %s, block_buffer %s\n",__func__,__LINE__, buf, block_buffer);
+        // fprintf(stderr,"[%s ,%d] inode.size %d, block_index %d, block_buffer %s\n",__func__,__LINE__, inode.size, block_index, block_buffer);
         bytes_write += copy_size;
         block_index++;
         block_offset = 0;  // Only the first block might have a non-zero offset
     }
-
+    inode.inode_save(disk);
     return bytes_write;  // Return the actual number of bytes read
 }
 

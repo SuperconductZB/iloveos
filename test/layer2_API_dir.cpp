@@ -66,30 +66,18 @@ TEST(FileOperationTest, WriteTest) {
     
     //file test
     get_disk_inum = fsop->disk_namei("/test");
-    inode.inode_construct(get_disk_inum, *H);
+    fsop->fischl_open("/test", &fi);
+    EXPECT_EQ(fi.fh, get_disk_inum);
     buffer[0] = '1';
-    fsop->write_datablock(inode, 0, buffer);
-    inode.inode_save(*H);
-    /*with fischl_write API*/
-    // fsop->fischl_open("/test", &fi);
-    // EXPECT_EQ(fi.fh, get_disk_inum);
-    // fsop->fischl_write("/test", buffer, sizeof(buffer), 0, &fi);
+    fsop->fischl_write("/test", buffer, sizeof(buffer), 0, &fi);
     //other file baz
     get_disk_inum = fsop->disk_namei("/foo/bar/baz");
-    inode.inode_construct(get_disk_inum, *H);
     buffer[0] = '4';
-    fsop->write_datablock(inode, 3, buffer);
+    fsop->fischl_open("/foo/bar/baz", &fi);
+    EXPECT_EQ(fi.fh, get_disk_inum);
+    fsop->fischl_write("/foo/bar/baz", buffer, sizeof(buffer), 3*IO_BLOCK_SIZE, &fi);
     buffer[0] = '5';
-    fsop->write_datablock(inode, 101, buffer);
-    inode.inode_save(*H);
-    // TODO: guard against overwriting directory datablocks
-    /*with new API*/
-    // buffer[0] = '4';
-    // fsop->fischl_open("/foo/bar/baz", &fi);
-    // EXPECT_EQ(fi.fh, get_disk_inum);
-    // fsop->fischl_write("/foo/bar/baz", buffer, sizeof(buffer), 3*IO_BLOCK_SIZE, &fi);
-    // buffer[0] = '5';
-    // fsop->fischl_write("/foo/bar/baz", buffer, sizeof(buffer), 101*IO_BLOCK_SIZE, &fi);
+    fsop->fischl_write("/foo/bar/baz", buffer, sizeof(buffer), 101*IO_BLOCK_SIZE, &fi);
 }
 
 TEST(FileOperationTest, RamDiskTest) {
