@@ -452,8 +452,30 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     // FileNode *get_file;
     // if((get_file = fischl_find_entry(root_node, path)) == NULL)
     //     return -ENOENT;
+    // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
+    // based on current write_datablock API implement, when write_datablock pass with actual size not index this function should be fixed
+    INode inode;
+    // Assuming inode is correctly initialized here based on 'path'
+    inode.inode_construct(fi->fh, disk);
+    size_t len = inode.size * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
 
-    return size;
+    size_t bytes_write = 0;
+    size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
+    size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
+    while (bytes_write < size) {
+        char block_buffer[IO_BLOCK_SIZE];  // Temporary buffer for each block
+        size_t copy_size = std::min(size - bytes_write, IO_BLOCK_SIZE - block_offset);
+        memcpy(block_buffer + block_offset, buf + bytes_write, copy_size);
+        write_datablock(inode, block_index, block_buffer);
+        fprintf(stderr,"[%s ,%d] inode.size %d\n",__func__,__LINE__, inode.size);
+        fprintf(stderr,"[%s ,%d] block_index %d\n",__func__,__LINE__, block_index);
+        fprintf(stderr,"[%s ,%d] buf %s, block_buffer %s\n",__func__,__LINE__, buf, block_buffer);
+        bytes_write += copy_size;
+        block_index++;
+        block_offset = 0;  // Only the first block might have a non-zero offset
+    }
+
+    return bytes_write;  // Return the actual number of bytes read
 }
 
 int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
