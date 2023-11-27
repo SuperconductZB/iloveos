@@ -5,6 +5,7 @@ Fs::Fs(RawDisk *disk) : disk(disk) {
   inode_manager = new INode_Manager_Freelist(this, 1, 1 + NUM_INODE_BLOCKS);
   datablock_manager =
       new DataBlock_Manager_Bitmap(this, 1 + NUM_INODE_BLOCKS, NUM_BLOCKS);
+  save_free_list_head(1 + NUM_INODE_BLOCKS);
 };
 
 Fs::~Fs() {
