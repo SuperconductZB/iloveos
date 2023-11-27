@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <gtest/gtest.h>
 #include <iostream>
-#include "fs.h"
+#include "fs.hpp"
 #include "direntry.h"
 
 typedef struct file_test{
@@ -171,18 +171,18 @@ void traverseDirHierarchy(const dir_test* dir, int depth = 0) {
 
 TEST(DirTest, root_test) {
     //Init fake root directory
-    INode inode_root;
+    INode_Data inode_root;
     u_int64_t file_permissions = 0;
-    inode_root.permissions = file_permissions | S_IFDIR;
+    inode_root.metadata.permissions = file_permissions | S_IFDIR;
     root = fischl_init_entry(0, mock_root->name, &inode_root);//0 is inode number assigned by inode_allocate()
 }
 TEST(DirTest, AddFile_test) {
     //assume file and dir itself(content,metadata) same,but different name and inode number
-    INode inode_file;
-    INode inode_dir;
+    INode_Data inode_file;
+    INode_Data inode_dir;
     u_int64_t file_permissions = 0;
     file_permissions = 0;
-    inode_dir.permissions = file_permissions | S_IFDIR;
+    inode_dir.metadata.permissions = file_permissions | S_IFDIR;
     fischl_add_entry(root, 2, mock_root->inFile->name,&inode_file);
     fischl_add_entry(root, 3, mock_root->subdir->name,&inode_dir);
 }
@@ -211,11 +211,11 @@ TEST(DirTest, FindFile_test) {
 }
 TEST(DirTest, Add_FindFile_test) {
     //add file and dir under subdirectory instead of root
-    INode inode_file;
-    INode inode_dir;
+    INode_Data inode_file;
+    INode_Data inode_dir;
     u_int64_t file_permissions = 0;
     file_permissions = 0;
-    inode_dir.permissions = file_permissions | S_IFDIR;
+    inode_dir.metadata.permissions = file_permissions | S_IFDIR;
 
     /*add with subdirectory*/
     //Treenode dir(you cannot find here), you only can get Filenode dir based on fischl_find_entry Function
@@ -279,8 +279,8 @@ TEST(DirTest, Add_FindFile_test) {
 }
 
 // TEST(DirTest, Scale_test){
-//     INode inode_file;
-//     INode inode_dir;
+//     INode_Data inode_file;
+//     INode_Data inode_dir;
 //     u_int64_t file_permissions = 0;
 //     file_permissions = 0;
 //     inode_dir.permissions = file_permissions | S_IFDIR;

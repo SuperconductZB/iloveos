@@ -142,9 +142,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-
-int main(int argc, char **argv) {
-    d = (argc < 2) ? "/dev/vdc" : argv[1];//how to do with this?
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

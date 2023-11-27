@@ -26,11 +26,23 @@ add_executable(${TARGET_LAYER1_API}
 )
 add_executable(${TARGET_LAYER2_API}
     ../lib/direntry.cpp
+    ../lib/rawdisk.cpp
+    ../lib/fs/datablock_manager.cpp
+    ../lib/fs/fs_data_types.cpp
+    ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs.cpp
+    ../lib/fs/inode_manager.cpp
     ../lib/files.cpp
     layer2_API_dir.cpp
 )
 add_executable(${TARGET_DIR_API}
     ../lib/direntry.cpp
+    ../lib/rawdisk.cpp
+    ../lib/fs/datablock_manager.cpp
+    ../lib/fs/fs_data_types.cpp
+    ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs.cpp
+    ../lib/fs/inode_manager.cpp
     dir_API.cpp
 )
 

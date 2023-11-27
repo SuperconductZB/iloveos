@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "fs.h"
+#include "fs.hpp"
 #include "direntry.h"
 /*********************************Hash operation********************************************
 
@@ -151,7 +151,7 @@ void freeTree(TreeNode *node) {
 
 ********************************************************************************************/
 //for fake root (mount point)
-TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *new_inode) {
+TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Data *new_inode) {
     TreeNode *newDir = (TreeNode *)malloc(sizeof(TreeNode));
     newDir->dirName = strdup(fileName);
     newDir->contents = createHashTable(20);//hashSize define 20
@@ -159,17 +159,17 @@ TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode *n
     FileNode *newFile = (FileNode *)malloc(sizeof(FileNode));
     newFile->name = strdup(fileName);
     newFile->inode_number = new_inode_number;
-    newFile->permissions = new_inode->permissions;
+    newFile->permissions = new_inode->metadata.permissions;
     newFile->subdirectory = newDir;
     newDir->self_info = newFile;
     return newDir;
 }
 
-int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode *new_inode){
+int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode){
     char *Name = strdup(fileName);
     TreeNode *newDir = NULL;
     /*If directory, malloc TreeNode, and then create filenode that belongs to Parent hash table content*/
-    if ((new_inode->permissions & S_IFMT) == S_IFDIR) {
+    if ((new_inode->metadata.permissions & S_IFMT) == S_IFDIR) {
         newDir = (TreeNode *)malloc(sizeof(TreeNode));
         newDir->dirName = Name;
         newDir->contents = createHashTable(20);//hasSize define 20
@@ -177,7 +177,7 @@ int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileNam
     }
     FileNode *newFile = insertHash(parent->contents, Name, newDir); //newDir == NULL indicates it's a file
     //assign INode *new_inode metadata to data member in FileNode structure
-    newFile->permissions = new_inode->permissions;
+    newFile->permissions = new_inode->metadata.permissions;
     newFile->inode_number = new_inode_number;
     //Diretory have its own file information, that is . here
     if(newDir != NULL)

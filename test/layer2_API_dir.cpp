@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <gtest/gtest.h>
 #include <iostream>
+#include "fs.hpp"
 #include "files.h"
 
 
@@ -27,6 +28,7 @@ void traverseDirHierarchy(const dir_test* dir, int depth);
 std::string target_filepath;
 dir_test* mock_root = nullptr;
 RawDisk *H;
+Fs *fs;
 FilesOperation *fsop;
 
 int total_dir_num = 0;
@@ -37,6 +39,7 @@ int total_free_file = 0;
 TEST(FileOperationTest, MkdirnodTest) {
 
     fsop->initialize_rootinode();
+    printf("OK\n");
     struct fuse_file_info fi;
 
     mode_t mode;//set mode
@@ -60,22 +63,24 @@ TEST(FileOperationTest, WriteTest) {
     // read and write to indirect datablocks are not supported yet
     //get inode info from disk
     char buffer[IO_BLOCK_SIZE] = {0};
-    INode inode;
+    INode_Data inode;
     u_int64_t get_disk_inum;
     //file test
     get_disk_inum = fsop->disk_namei("/test");
-    inode.inode_construct(get_disk_inum, *H);
+    inode.inode_num = get_disk_inum;
+    fs->inode_manager->load_inode(&inode);
     buffer[0] = '1';
     fsop->write_datablock(inode, 0, buffer);
-    inode.inode_save(*H);
+    fs->inode_manager->save_inode(&inode);
     //other file baz
     get_disk_inum = fsop->disk_namei("/foo/bar/baz");
-    inode.inode_construct(get_disk_inum, *H);
+    inode.inode_num = get_disk_inum;
+    fs->inode_manager->load_inode(&inode);
     buffer[0] = '4';
     fsop->write_datablock(inode, 3, buffer);
     buffer[0] = '5';
     fsop->write_datablock(inode, 101, buffer);
-    inode.inode_save(*H);
+    fs->inode_manager->save_inode(&inode);
     // TODO: guard against overwriting directory datablocks
 }
 
@@ -117,12 +122,13 @@ TEST(FileOperationTest, RamDiskTest) {
 TEST(FileOperationTest, ReadTest) {
     // read files (TODO: fischl_read)
     char read_buffer[IO_BLOCK_SIZE] = {0};
-    INode inode;
+    INode_Data inode;
     u_int64_t get_file_inum;
 
     //read test file
     get_file_inum = fsop->namei("/test");
-    inode.inode_construct(get_file_inum, *H);
+    inode.inode_num = get_file_inum;
+    fs->inode_manager->load_inode(&inode);
     fsop->read_datablock(inode, 0, read_buffer);
     EXPECT_EQ(read_buffer[0], '1');
 
@@ -135,7 +141,8 @@ TEST(FileOperationTest, ReadTest) {
 
     //read baz file
     get_file_inum= fsop->namei("/foo/bar/baz");
-    inode.inode_construct(get_file_inum, *H);
+    inode.inode_num = get_file_inum;
+    fs->inode_manager->load_inode(&inode);
     fsop->read_datablock(inode, 3, read_buffer);
     EXPECT_EQ(read_buffer[0], '4');
     fsop->read_datablock(inode, 101, read_buffer);
@@ -192,8 +199,10 @@ int main(int argc, char **argv) {
     const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
     setupTestDirectory(&mock_root);
-    H = new RawDisk(d);
-    fsop = new FilesOperation(*H);
+    H = new FakeRawDisk(2048);
+    fs = new Fs(H);
+    fs->format();
+    fsop = new FilesOperation(*H, fs);
 
     ::testing::InitGoogleTest(&argc, argv);
     int result = RUN_ALL_TESTS();

@@ -1,22 +1,21 @@
 #include <sys/types.h>
-#include <fs.h>
+#include <fs.hpp>
 #include "fuse_common.h"
 #include "direntry.h"
 
 class FilesOperation {
     RawDisk& disk;
-    INodeOperation inop;
-    INode* new_inode(u_int64_t inode_number, u_int64_t permissions);
-    void create_dot_dotdot(INode*, u_int64_t);
+    Fs *fs;
+    void create_dot_dotdot(INode_Data*, u_int64_t);
 
     public:
     TreeNode *root_node;
-    FilesOperation(RawDisk&);
-    int read_datablock(const INode& inode, u_int64_t index, char* buffer);
-    int write_datablock(INode& inode, u_int64_t index, const char* buffer);
+    FilesOperation(RawDisk&, Fs*);
+    int read_datablock(const INode_Data& inode, u_int64_t index, char* buffer);
+    int write_datablock(INode_Data& inode, u_int64_t index, char* buffer);
     void initialize_rootinode();
     void printDirectory(u_int64_t);
-    INode* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
+    INode_Data* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     void unlink_inode(u_int64_t inode_number);
     u_int64_t disk_namei(const char* path);
     u_int64_t namei(const char* path);
