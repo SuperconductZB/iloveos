@@ -100,11 +100,8 @@ void FilesOperation::create_dot_dotdot(INode_Data* inode, u_int64_t parent_inode
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     INode_Data *root_inode = new INode_Data();
-    printf("OK0\n");
     fs->inode_manager->new_inode(0, 0, S_IFDIR, root_inode);
-    printf("OK1\n");
     u_int64_t root_inode_number = root_inode->inode_num;
-    printf("OK2\n");
     create_dot_dotdot(root_inode, root_inode_number);
     root_node = fischl_init_entry(root_inode_number, "/", root_inode);
     assert(root_node->self_info!=NULL);
@@ -451,10 +448,11 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     //     return -ENOENT;
     // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
     // based on current write_datablock API implement, when write_datablock pass with actual size not index this function should be fixed
-    INode inode;
+    INode_Data inode;
     // Assuming inode is correctly initialized here based on 'path'
-    inode.inode_construct(fi->fh, disk);
-    size_t len = inode.size * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
+    inode.inode_num = fi->fh;
+    fs->inode_manager->load_inode(&inode);
+    size_t len = inode.metadata.size * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
 
     size_t bytes_write = 0;
     size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
@@ -469,7 +467,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         block_index++;
         block_offset = 0;  // Only the first block might have a non-zero offset
     }
-    inode.inode_save(disk);
+    fs->inode_manager->save_inode(&inode);
     return bytes_write;  // Return the actual number of bytes read
 }
 
