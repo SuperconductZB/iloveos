@@ -8,6 +8,20 @@
 #include <stddef.h>
 #include <assert.h>
 
+void* fischl_init(struct fuse_conn_info *conn) {
+
+}
+
+static int fischl_getattr(const char* path, struct stat* stbuf) {
+
+	return 0;
+}
+
+static int fischl_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
+
+	return 0;
+}
+
 static int fischl_mkdir(const char *, mode_t) {
 
     return 0;
@@ -16,6 +30,11 @@ static int fischl_mkdir(const char *, mode_t) {
 static int fischl_open(const char *path, struct fuse_file_info *fi) {
     
     return 0;
+}
+
+static int fischl_read(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+	
+	return 0;
 }
 
 static const struct fuse_operations fischl_oper = {
@@ -27,7 +46,7 @@ static const struct fuse_operations fischl_oper = {
 	.read		= fischl_read,
 };
 
-static void show_help(const char *progname)
+static void fischl::show_help(const char *progname)
 {
 	printf("usage: %s [options] <mountpoint>\n\n", progname);
 	printf("File-system specific options:\n"
@@ -38,7 +57,7 @@ static void show_help(const char *progname)
 	       "\n");
 }
 
-int fischl::init(int argc, char *argv[])
+int fischl(int argc, char *argv[])
 {
 	int ret;
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -60,7 +79,7 @@ int fischl::init(int argc, char *argv[])
 		args.argv[0][0] = '\0';
 	}
 
-	ret = fuse_main(args.argc, args.argv, &hello_oper, NULL);
+	ret = fuse_main(args.argc, args.argv, &fischl_oper, NULL);
 	fuse_opt_free_args(&args);
 	return ret;
 }
