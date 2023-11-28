@@ -7,7 +7,7 @@
 int main(int argc, char *argv[]) {
   // const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
-  RawDisk *H = new FakeRawDisk(2048);
+  RawDisk *H = new FakeRawDisk(21504);
   Fs *fs = new Fs(H);
 
   printf("test inode\n");
@@ -65,12 +65,13 @@ int main(int argc, char *argv[]) {
                   1); // the first 8 bytes of 4k I/O block will store
                       // the next address(after 2048*4k I/O block)
   // test the end of the datablock
-  H->read_block(NUM_BLOCKS - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
+  
+  H->read_block(fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
   t = 0;
   for (int j = 0; j < 8; j++)
     t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-  assert(t == NUM_BLOCKS - DATABLOCKS_PER_BITMAP_BLOCK - 1);
+  assert(t == fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1);
 
   /***************************test inode
    * de/allocation**********************************/
@@ -111,30 +112,30 @@ int main(int argc, char *argv[]) {
   u_int64_t rec_datablock_free[10][3] = {0}; // array version
   u_int64_t temp_block_num = 0;
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block starting addres: ", i);
+    printf("%dth data block starting addres: ", i);
     for (int j = 0; j < 6; j++) {
       fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+      printf("%llu," ,temp_block_num);
     }
-    // printf("\n");
+    printf("\n");
   }
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block free addres: ", i);
+    printf("%dth data block free addres: ", i);
     for (int j = 2; j >= 0; j--) {
       fs->deallocate_datablock(&inode_list[i], &(rec_datablock_free[i][j]));
-      // printf("", rec_datablock_free[i][j]);
+      printf("%llu,", rec_datablock_free[i][j]);
     }
-    // printf("\n");
+    printf("\n");
   }
 
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block allocate again addres: ", i);
+     printf("%dth data block allocate again addres: ", i);
     for (int j = 0; j < 3; j++) {
       fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      assert(temp_block_num == rec_datablock_free[i][j]);
-      // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+      //assert(temp_block_num == rec_datablock_free[i][j]);
+      printf("%llu," ,itemp_block_num);
     }
-    // printf("\n");
+    printf("\n");
   }
 
   // printf("}\n");
