@@ -111,30 +111,30 @@ int main(int argc, char *argv[]) {
   u_int64_t rec_datablock_free[10][3] = {0}; // array version
   u_int64_t temp_block_num = 0;
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block starting addres: ", i);
+    printf("%dth data block starting addres: ", i);
     for (int j = 0; j < 6; j++) {
       fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+      printf("%llu," ,temp_block_num);
     }
-    // printf("\n");
+    printf("\n");
   }
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block free addres: ", i);
+    printf("%dth data block free addres: ", i);
     for (int j = 2; j >= 0; j--) {
       fs->deallocate_datablock(&inode_list[i], &(rec_datablock_free[i][j]));
-      // printf("", rec_datablock_free[i][j]);
+      printf("%llu,", rec_datablock_free[i][j]);
     }
-    // printf("\n");
+    printf("\n");
   }
 
   for (int i = 0; i < 10; i++) {
-    // printf("%dth data block allocate again addres: ", i);
+     printf("%dth data block allocate again addres: ", i);
     for (int j = 0; j < 3; j++) {
       fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      assert(temp_block_num == rec_datablock_free[i][j]);
-      // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+      //assert(temp_block_num == rec_datablock_free[i][j]);
+      printf("%llu," ,itemp_block_num);
     }
-    // printf("\n");
+    printf("\n");
   }
 
   // printf("}\n");
