@@ -7,7 +7,7 @@
 int main(int argc, char *argv[]) {
   // const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
-  RawDisk *H = new FakeRawDisk(2048);
+  RawDisk *H = new FakeRawDisk(21504);
   Fs *fs = new Fs(H);
 
   printf("test inode\n");
@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
                   1); // the first 8 bytes of 4k I/O block will store
                       // the next address(after 2048*4k I/O block)
   // test the end of the datablock
+  
   H->read_block(fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
   t = 0;
   for (int j = 0; j < 8; j++)
