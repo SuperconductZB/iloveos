@@ -11,9 +11,10 @@ class FilesOperation {
     public:
     TreeNode *root_node;
     FilesOperation(RawDisk&, Fs*);
-    int read_datablock(const INode_Data& inode, u_int64_t index, char* buffer);
-    int write_datablock(INode_Data& inode, u_int64_t index, char* buffer);
+    //int read_datablock(const INode_Data& inode, u_int64_t index, char* buffer);
+    //int write_datablock(INode_Data& inode, u_int64_t index, char* buffer);
     void initialize_rootinode();
+    void printbuffer(const char*,int);
     void printDirectory(u_int64_t);
     INode_Data* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     void unlink_inode(u_int64_t inode_number);

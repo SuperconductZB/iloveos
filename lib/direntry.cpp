@@ -101,15 +101,6 @@ TreeNode *find_parentPath(TreeNode *root, const char *path) {
 void freeHashTable(HashTable *table) {
     if (table == NULL) return;
 
-    for (int i = 0; i < table->size; ++i) {
-        FileNode *current = table->table[i];
-        while (current != NULL) {
-            FileNode *temp = current;
-            current = current->next;
-            // free(temp->name);
-            // free(temp);
-        }
-    }
     free(table->table);
     free(table);
 }

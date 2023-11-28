@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < 3; j++) {
       fs->allocate_datablock(&inode_list[i], &temp_block_num);
       //assert(temp_block_num == rec_datablock_free[i][j]);
-      printf("%llu," ,itemp_block_num);
+      printf("%llu," ,temp_block_num);
     }
     printf("\n");
   }

@@ -3,6 +3,7 @@ set(TARGET_LAYER1_API test_layer1_API)
 set(TARGET_LAYER2_API test_layer2_API)
 set(TARGET_DIR_API test_dir_API)
 set(DIR_PLACE /dev/vdb)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
 
 # add test sources here ... 
 add_executable(${TARGET_LAYER0}
@@ -21,6 +22,7 @@ add_executable(${TARGET_LAYER1_API}
     ../lib/fs/datablock_manager.cpp
     ../lib/fs/fs_data_types.cpp
     ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs_read_write.cpp
     ../lib/fs/fs.cpp
     ../lib/fs/inode_manager.cpp
 )
@@ -30,6 +32,7 @@ add_executable(${TARGET_LAYER2_API}
     ../lib/fs/datablock_manager.cpp
     ../lib/fs/fs_data_types.cpp
     ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs_read_write.cpp
     ../lib/fs/fs.cpp
     ../lib/fs/inode_manager.cpp
     ../lib/files.cpp
@@ -41,6 +44,7 @@ add_executable(${TARGET_DIR_API}
     ../lib/fs/datablock_manager.cpp
     ../lib/fs/fs_data_types.cpp
     ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs_read_write.cpp
     ../lib/fs/fs.cpp
     ../lib/fs/inode_manager.cpp
     dir_API.cpp

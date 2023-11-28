@@ -27,7 +27,7 @@ void traverseDirHierarchy(const dir_test* dir, int depth);
 //global can be taken
 std::string target_filepath;
 dir_test* mock_root = nullptr;
-RawDisk *H;
+RawDisk *H; // Use FakeRawDisk here if memory sanitizer complains
 Fs *fs;
 FilesOperation *fsop;
 
@@ -45,15 +45,11 @@ TEST(FileOperationTest, MkdirnodTest) {
     mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
     //S_IRWXU(S_IRUSR | S_IWUSR | S_IXUSR) (owner), S_IRWXG(S_IRGRP | S_IWGRP | S_IXGRP) (group), S_IRWXO(S_IROTH | S_IWOTH | S_IXOTH)
     EXPECT_EQ(fsop->fischl_create("/test", mode, &fi), 0);
-    printf("point 1:");
-    fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_mkdir("/foo", mode), 0);
-    printf("point 2:");
-    fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_mkdir("/foo/bar", mode),0);
-    printf("point 3:");
     fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_create("/foo/bar/baz", mode, &fi), 0);
+    fsop->printDirectory(4);
     // the following three testcases will fail
     printf("Failing cases\n");
     EXPECT_TRUE(fsop->fischl_mkdir("foo/bar", mode) < 0);
@@ -74,11 +70,14 @@ TEST(FileOperationTest, WriteTest) {
     struct fuse_file_info fi;
     
     //file test
+    printf("point 0\n");
     get_disk_inum = fsop->disk_namei("/test");
+    printf("point 1\n");
     fsop->fischl_open("/test", &fi);
     EXPECT_EQ(fi.fh, get_disk_inum);
     buffer[0] = '1';
     fsop->fischl_write("/test", buffer, sizeof(buffer), 0, &fi);
+    printf("point 2\n");
     //other file baz
     get_disk_inum = fsop->disk_namei("/foo/bar/baz");
     buffer[0] = '4';
@@ -134,8 +133,8 @@ TEST(FileOperationTest, ReadTest) {
     get_file_inum = fsop->namei("/test");
     inode.inode_num = get_file_inum;
     fs->inode_manager->load_inode(&inode);
-    fsop->read_datablock(inode, 0, read_buffer);
-    EXPECT_EQ(read_buffer[0], '1');
+    //fsop->read_datablock(inode, 0, read_buffer);
+    //EXPECT_EQ(read_buffer[0], '1');
 
     //read test file again with fischl_read API
     struct fuse_file_info fi;
@@ -165,12 +164,14 @@ TEST(FileOperationTest, PressureTest) {
     mode_t mode;//set mode
     mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
     EXPECT_EQ(fsop->fischl_mkdir("/pressure", mode), 0);
+    fsop->printDirectory(1);
 
     u_int64_t inode_numbers[700];
     std::string prefix = "/pressure/No_";
     for(int i=0;i<700;i++){
         EXPECT_EQ(fsop->fischl_mkdir((prefix+std::to_string(i)).c_str(), mode), 0);
     }
+    fsop->printDirectory(6);
     for(int i=0;i<700;i++){
         EXPECT_EQ(fsop->namei((prefix+std::to_string(i)).c_str()),fsop->disk_namei((prefix+std::to_string(i)).c_str()));
     }
@@ -211,7 +212,7 @@ int main(int argc, char **argv) {
     const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
     setupTestDirectory(&mock_root);
-    H = new FakeRawDisk(2048);
+    H = new FakeRawDisk(21504);
     fs = new Fs(H);
     fs->format();
     fsop = new FilesOperation(*H, fs);
@@ -299,7 +300,9 @@ dir_test* createDirHierarchy(int level, int maxLevel) {
 void setupTestDirectory(dir_test** root) {
     // Allocate memory for root
     *root = new dir_test;
-    (*root)->name = strdup("/"); // use / as begin
+    char* root_name = new char[2];
+    strcpy(root_name, "/");
+    (*root)->name = root_name; // use / as begin
     (*root)->inFile = nullptr; // Initialize file list to nullptr
     (*root)->subdir = createDirHierarchy(0, 1);
     (*root)->next = nullptr;
