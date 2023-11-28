@@ -65,12 +65,12 @@ int main(int argc, char *argv[]) {
                   1); // the first 8 bytes of 4k I/O block will store
                       // the next address(after 2048*4k I/O block)
   // test the end of the datablock
-  H->read_block(NUM_BLOCKS - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
+  H->read_block(fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
   t = 0;
   for (int j = 0; j < 8; j++)
     t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-  assert(t == NUM_BLOCKS - DATABLOCKS_PER_BITMAP_BLOCK - 1);
+  assert(t == fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1);
 
   /***************************test inode
    * de/allocation**********************************/
