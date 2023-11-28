@@ -68,19 +68,23 @@ int FilesOperation::read_datablock(const INode_Data& inode, u_int64_t index, cha
     if (read_offset == (u_int64_t)(-1)) {
         return -1;
     }
+    //printf("Read %llu\n", read_offset/IO_BLOCK_SIZE);
     return disk.read_block(read_offset/IO_BLOCK_SIZE, buffer);
 }
 
 int FilesOperation::write_datablock(INode_Data& inode, u_int64_t index, char* buffer) {
     while (index >= inode.metadata.size) {
         u_int64_t alloc_num;
-        fs->allocate_datablock(&inode, &alloc_num);
+        int ret = (fs->allocate_datablock(&inode, &alloc_num));
+        printf("allocate_datablock returned %d\n",ret);
+        if (ret!=0) assert(false);
         inode.metadata.size += 1;
     }
     u_int64_t write_offset = index_to_offset(inode, disk, index);
     if (write_offset == (u_int64_t)(-1)) {
         return -1;
     }
+    //printf("Write %llu\n", write_offset/IO_BLOCK_SIZE);
     return disk.write_block(write_offset/IO_BLOCK_SIZE, buffer);
 }
 
@@ -131,7 +135,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
     }
     INode_Data inode;
     inode.inode_num = parent_inode_number;
-    fs->inode_manager->save_inode(&inode);
+    fs->inode_manager->load_inode(&inode);
     if ((inode.metadata.permissions & S_IFMT) != S_IFDIR) {
         fprintf(stderr,"[%s ,%d] please create under directory\n",__func__,__LINE__);
         return NULL;
@@ -156,7 +160,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
     }
 
     bool allocated = false;
-    INode_Data *new_inode;
+    INode_Data *new_inode = new INode_Data();
     fs->inode_manager->new_inode(0, 0, mode, new_inode);
     if ((mode & S_IFMT) == S_IFDIR) {
         create_dot_dotdot(new_inode, parent_inode_number);
@@ -181,7 +185,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
             break;
         }
     }
-    
+
     if (!allocated) {
         char write_buffer[IO_BLOCK_SIZE] = {0};
         DirectoryEntry ent;
@@ -265,6 +269,7 @@ int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
         return -ENOENT;//parentpath directory does not exist
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
     //make new inode
     INode_Data* ret = create_new_inode(parent_inode_number, newDirname, mode|S_IFDIR);//specify S_IFDIR as directory
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST

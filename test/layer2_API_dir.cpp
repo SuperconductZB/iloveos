@@ -39,17 +39,23 @@ int total_free_file = 0;
 TEST(FileOperationTest, MkdirnodTest) {
 
     fsop->initialize_rootinode();
-    printf("OK\n");
     struct fuse_file_info fi;
 
     mode_t mode;//set mode
     mode = S_IRWXU | S_IRWXG | S_IRWXO;//future should test permission
     //S_IRWXU(S_IRUSR | S_IWUSR | S_IXUSR) (owner), S_IRWXG(S_IRGRP | S_IWGRP | S_IXGRP) (group), S_IRWXO(S_IROTH | S_IWOTH | S_IXOTH)
-    EXPECT_EQ(fsop->fischl_create("/test", mode, &fi), 0); // mode here is not used yet
+    EXPECT_EQ(fsop->fischl_create("/test", mode, &fi), 0);
+    printf("point 1:");
+    fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_mkdir("/foo", mode), 0);
+    printf("point 2:");
+    fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_mkdir("/foo/bar", mode),0);
+    printf("point 3:");
+    fsop->printDirectory(1);
     EXPECT_EQ(fsop->fischl_create("/foo/bar/baz", mode, &fi), 0);
     // the following three testcases will fail
+    printf("Failing cases\n");
     EXPECT_TRUE(fsop->fischl_mkdir("foo/bar", mode) < 0);
     EXPECT_TRUE(fsop->fischl_mkdir("/doesnt_exist/bar", mode) < 0);
     EXPECT_TRUE(fsop->fischl_mkdir("/test/bar", mode) < 0);
