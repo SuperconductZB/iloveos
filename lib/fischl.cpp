@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include <assert.h>
+#include "files.h"
 
 void* fischl_init(struct fuse_conn_info *conn) {
 
@@ -31,7 +32,7 @@ static int fischl_fgetattr(const char* path, struct stat* stbuf) {
 	return 0;
 }
 
-static int fischl_access(const char* path, mask) {
+static int fischl_access(const char* path, int mask) {
 
 }
 
