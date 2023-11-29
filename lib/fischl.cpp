@@ -164,12 +164,14 @@ static const struct fuse_operations fischl_oper = {
     .bmap        = fischl_bmap,
     .ioctl       = fischl_ioctl,
     .poll        = fischl_poll,
+/*
 #ifdef HAVE_SETXATTR
     .setxattr    = fischl_setxattr,
     .getxattr    = fischl_getxattr,
     .listxattr   = fischl_listxattr,
     .removexattr = fischl_removexattr,
 #endif
+*/
     .flag_nullpath_ok = 0,
 };
 
