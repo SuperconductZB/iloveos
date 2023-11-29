@@ -43,7 +43,7 @@ public:
   u_int64_t single_indirect_block, double_indirect_block, triple_indirect_block;
   u_int64_t direct_blocks[NUMBER_OF_DIRECT_BLOCKS];
 
-  INode_Data(u_int64_t inode_num = 0xFFFFFFFFFFFFFFFF);
+  INode_Data(u_int64_t inode_num = (u_int64_t)(0xFFFFFFFFFFFFFFFF));
   void serialize(char buf[]);
   void deserialize(char buf[]);
 };
