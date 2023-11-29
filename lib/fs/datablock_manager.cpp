@@ -1,7 +1,7 @@
 #include "fs.hpp"
 
 DataBlock_Manager::DataBlock_Manager(Fs *fs, u_int64_t block_segment_start,
-                                         u_int64_t block_segment_end)
+                                     u_int64_t block_segment_end)
     : fs(fs), block_segment_start(block_segment_start),
       block_segment_end(block_segment_end) {}
 
@@ -122,6 +122,7 @@ int DataBlock_Manager_Bitmap::format() {
   char buf[IO_BLOCK_SIZE] = {0};
   int err;
   u_int64_t i = block_segment_start;
+  write_u64(i, buf);
   for (; i <= block_segment_end - (2 * bitmap_region_size);
        i += bitmap_region_size) {
     write_u64(i + bitmap_region_size, buf);
