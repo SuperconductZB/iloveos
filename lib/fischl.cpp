@@ -12,9 +12,35 @@ void* fischl_init(struct fuse_conn_info *conn) {
 
 }
 
+void fischl_create(const char *, mode_t, struct fuse_file_info *) {
+	
+}
+
+
+void fischl_destroy(void* private_data) {
+
+}
+
 static int fischl_getattr(const char* path, struct stat* stbuf) {
 
 	return 0;
+}
+
+static int fischl_fgetattr(const char* path, struct stat* stbuf) {
+
+	return 0;
+}
+
+static int fischl_access(const char* path, mask) {
+
+}
+
+static int fischl_readlink(const char* path, char* buf, size_t size) {
+
+}
+
+static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
+
 }
 
 static int fischl_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
@@ -22,9 +48,53 @@ static int fischl_readdir(const char* path, void* buf, fuse_fill_dir_t filler, o
 	return 0;
 }
 
+static int fischl_mknod(const char* path, mode_t mode, dev_t rdev) {
+
+}
+
 static int fischl_mkdir(const char *, mode_t) {
 
     return 0;
+}
+
+static int fischl_unlink(const char* path) {
+
+}
+
+static int fischl_rmdir(const char* path) {
+
+}
+
+static int fischl_symlink(const char* to, const char* from) {
+
+}
+
+static int fischl_rename(const char* from, const char* to) {
+
+}
+
+static int fischl_link(const char* from, const char* to) {
+
+}
+
+static int fischl_chmod(const char* path, mode_t mode) {
+
+}
+
+static int fischl_chown(const char* path, uid_t uid, gid_t gid) {
+
+}
+
+static int fischl_truncate(const char* path, off_t size) {
+
+}
+
+static int fischl_ftruncate(const char* path, off_t size) {
+
+}
+
+static int fischl_utimens(const char* path, const struct timespec ts[2]) {
+
 }
 
 static int fischl_open(const char *path, struct fuse_file_info *fi) {
@@ -36,6 +106,35 @@ static int fischl_read(const char* path, char *buf, size_t size, off_t offset, s
 	
 	return 0;
 }
+
+static int fischl_write(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+
+}
+
+static int fischl_statfs(const char* path, struct statvfs* stbuf) {
+
+}
+
+static int fischl_release(const char* path, struct fuse_file_info *fi) {
+
+}
+
+static int fischl_releasedir(const char* path, struct fuse_file_info *fi) {
+
+}
+
+static int fischl_bmap(const char* path, size_t blocksize, uint64_t* blockno) {
+
+}
+
+static int fischl_ioctl(const char* path, int cmd, void* arg, struct fuse_file_info* fi, unsigned int flags, void* data) {
+
+}
+
+static int fischl_poll(const char* path, struct fuse_file_info* fi, struct fuse_pollhandle* ph, unsigned* reventsp){
+
+}
+
 
 static const struct fuse_operations fischl_oper = {
 	.init        = fischl_init,
@@ -65,10 +164,6 @@ static const struct fuse_operations fischl_oper = {
     .release     = fischl_release,
     .opendir     = fischl_opendir,
     .releasedir  = fischl_releasedir,
-    .fsync       = fischl_fsync,
-    .flush       = fischl_flush,
-    .fsyncdir    = fischl_fsyncdir,
-    .lock        = fischl_lock,
     .bmap        = fischl_bmap,
     .ioctl       = fischl_ioctl,
     .poll        = fischl_poll,
