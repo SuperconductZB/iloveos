@@ -12,8 +12,8 @@ void* fischl_init(struct fuse_conn_info *conn) {
 
 }
 
-void fischl_create(const char *, mode_t, struct fuse_file_info *) {
-	
+int fischl_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+	return FilesOperation::fischl_create(path, mode, fi);
 }
 
 
@@ -52,13 +52,12 @@ static int fischl_mknod(const char* path, mode_t mode, dev_t rdev) {
 
 }
 
-static int fischl_mkdir(const char *, mode_t) {
-
-    return 0;
+static int fischl_mkdir(const char *path, mode_t mode) {
+    return FilesOperation::fischl_mkdir(path, mode);
 }
 
 static int fischl_unlink(const char* path) {
-
+	return FilesOperation::fischl_unlink(path);
 }
 
 static int fischl_rmdir(const char* path) {
@@ -98,17 +97,15 @@ static int fischl_utimens(const char* path, const struct timespec ts[2]) {
 }
 
 static int fischl_open(const char *path, struct fuse_file_info *fi) {
-    
-    return 0;
+    return FilesOperation::fischl_open(path, fi);
 }
 
 static int fischl_read(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi) {
-	
-	return 0;
+	return FilesOperation::fischl_read(path, buf, size, offset, fi);
 }
 
 static int fischl_write(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi) {
-
+	return FilesOperation::fischl_write(path, buf, size, offset, fi);
 }
 
 static int fischl_statfs(const char* path, struct statvfs* stbuf) {
@@ -116,7 +113,7 @@ static int fischl_statfs(const char* path, struct statvfs* stbuf) {
 }
 
 static int fischl_release(const char* path, struct fuse_file_info *fi) {
-
+	return FilesOperation::fischl_release(path, fi);
 }
 
 static int fischl_releasedir(const char* path, struct fuse_file_info *fi) {
