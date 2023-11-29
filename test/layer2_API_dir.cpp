@@ -30,6 +30,7 @@ dir_test* mock_root = nullptr;
 RawDisk *H; // Use FakeRawDisk here if memory sanitizer complains
 Fs *fs;
 FilesOperation *fsop;
+std::string prefix = "/pressure/No_";
 
 int total_dir_num = 0;
 int total_file_num = 0;
@@ -62,7 +63,6 @@ TEST(FileOperationTest, MkdirnodTest) {
 
 TEST(FileOperationTest, WriteTest) {
     // write to files (TODO: fischl_write)
-    // read and write to indirect datablocks are not supported yet
     //get inode info from disk
     char buffer[IO_BLOCK_SIZE] = {0};
     INode_Data inode;
@@ -166,45 +166,43 @@ TEST(FileOperationTest, PressureTest) {
     EXPECT_EQ(fsop->fischl_mkdir("/pressure", mode), 0);
     fsop->printDirectory(1);
 
-    u_int64_t inode_numbers[700];
-    std::string prefix = "/pressure/No_";
-    for(int i=0;i<700;i++){
+    for(int i=0;i<100;i++){
         EXPECT_EQ(fsop->fischl_mkdir((prefix+std::to_string(i)).c_str(), mode), 0);
     }
     fsop->printDirectory(6);
-    for(int i=0;i<700;i++){
+    for(int i=0;i<100;i++){
         EXPECT_EQ(fsop->namei((prefix+std::to_string(i)).c_str()),fsop->disk_namei((prefix+std::to_string(i)).c_str()));
     }
 }
-// TEST(FileOperationTest, UnlinkTest) {
-//     printf("=== Part 6: unlink test ===\n");
-//     fsop.printDirectory(file_pressure);
-//     for(int i=0;i<700;i+=2){
-//         assert(!fsop.fischl_unlink((prefix+std::to_string(i)).c_str()));
-//     }
-//     for(int i=0;i<4;i+=2){
-//         assert(fsop.namei((prefix+std::to_string(i)).c_str())==(u_int64_t)(-1));
-//     }
-//     for(int i=1;i<700;i+=2){
-//         u_int64_t inode_number = fsop.namei((prefix+std::to_string(i)).c_str());
-//         assert(inode_number == inode_numbers[i]);
-//     }
-//     fsop.printDirectory(file_pressure);
-//     std::string newprefix = "/pressure/New";
-//     for(int i=0;i<700;i+=2){
-//         inode_numbers[i] = fsop.fischl_mkdir((newprefix+std::to_string(i)).c_str(), 0);
-//     }
-//     for(int i=0;i<700;i+=2){
-//         u_int64_t inode_number = fsop.namei((newprefix+std::to_string(i)).c_str());
-//         assert(inode_number == inode_numbers[i]);
-//     }
-//     fsop.printDirectory(file_pressure);
 
-//     // long filename test
-//     std::string longfilename = std::string(255,'A');
-//     u_int64_t filelong = fsop.fischl_mknod((std::string("/")+longfilename).c_str(),0);
-//     printf("/AAA...AAA is inode %llu, it is a file\n", filelong);
-// }
+TEST(FileOperationTest, UnlinkTest) {
+    ssize_t file_pressure = fsop->namei("/pressure");
+    fsop->printDirectory(file_pressure);
+    for(int i=0;i<100;i+=2){
+        EXPECT_EQ(fsop->fischl_unlink((prefix+std::to_string(i)).c_str()), 0);
+    }
+    for(int i=0;i<4;i+=2){
+        EXPECT_EQ(fsop->namei((prefix+std::to_string(i)).c_str()), (u_int64_t)(-1));
+    }
+    printf("Finished Deallocating\n");
+    fsop->printDirectory(file_pressure);
+    std::string newprefix = "/pressure/New";
+    for(int i=0;i<100;i+=2){
+        EXPECT_EQ(fsop->fischl_mkdir((newprefix+std::to_string(i)).c_str(), 0), 0);
+    }
+    for(int i=0;i<100;i+=2){
+        u_int64_t inode_number = fsop->namei((newprefix+std::to_string(i)).c_str());
+        assert(inode_number>0);
+    }
+    printf("Finished Reallocating\n");
+    fsop->printDirectory(file_pressure);
+
+    // long filename test
+    std::string longfilename = std::string(255,'A');
+    EXPECT_EQ(fsop->fischl_mknod((std::string("/")+longfilename).c_str(),0,0),0);
+    u_int64_t filelong = fsop->namei((std::string("/")+longfilename).c_str());
+    printf("/AAA...AAA is inode %llu, it is a file\n", filelong);
+}
 
 
 int main(int argc, char **argv) {

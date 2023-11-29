@@ -60,16 +60,17 @@ void FilesOperation::initialize_rootinode() {
 }
 
 void FilesOperation::printDirectory(u_int64_t inode_number) {
-    // limit to first datablock
     INode_Data inode;
     inode.inode_num = inode_number;
     fs->inode_manager->load_inode(&inode);
     char buffer[IO_BLOCK_SIZE] = {0};
-    fs->read(&inode, buffer, IO_BLOCK_SIZE, 0);
-    DirectoryEntry ent;
-    for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-        ent.deserialize(buffer+i);
-        if (ent.inode_number) printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(buffer+i);
+            if (ent.inode_number) printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+        }
     }
     printf("\n");
 }
@@ -298,6 +299,7 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
     }
     // TODO: This is probably incorrect
     while(inode.metadata.size != 0) {
+        printf("dealloc, %d\n", inode.metadata.size);
         u_int64_t dummy;
         fs->deallocate_datablock(&inode, &dummy);
         inode.metadata.size-=IO_BLOCK_SIZE;
