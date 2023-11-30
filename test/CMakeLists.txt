@@ -19,7 +19,7 @@ add_executable(${TARGET_LAYER1_API}
     ../lib/rawdisk.cpp
     ../lib/fs/datablock_manager.cpp
     ../lib/fs/fs_data_types.cpp
-    ../lib/fs/fs_resize.cpp
+    ../lib/fs/fs_file_io.cpp
     ../lib/fs/fs.cpp
     ../lib/fs/inode_manager.cpp
 )

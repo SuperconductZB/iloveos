@@ -2,13 +2,15 @@
 
 class DatablockOperation {
 public:
+  DatablockOperation(int (*_skip)(DatablockOperation *, u_int64_t) = nullptr)
+      : skip(_skip) {}
   char *buf;
   size_t count;
   size_t offset;
   size_t bytes_completed;
   Fs *fs;
   virtual int operation(u_int64_t block_num, bool *delete_block) = 0;
-  int (*skip)(DatablockOperation *, u_int64_t) = nullptr;
+  int (*skip)(DatablockOperation *, u_int64_t);
 };
 
 int default_skip_func(DatablockOperation *this_op, u_int64_t num_blocks) {
@@ -20,7 +22,8 @@ int default_skip_func(DatablockOperation *this_op, u_int64_t num_blocks) {
   return 1;
 }
 
-int pass_skip_func(DatablockOperation *this_op, u_int64_t num_blocks) {
+int truncate_skip_func(DatablockOperation *this_op, u_int64_t num_blocks) {
+  this_op->offset = 0;
   return 1;
 }
 
@@ -75,16 +78,19 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   int err;
   int result = -1;
 
-  u_int64_t indirect_block_size = 1;
-  for (int i = 1; i < indirect_num; ++i)
-    indirect_block_size *= IO_BLOCK_SIZE;
+  u_int64_t indirect_block_size;
+  u_int64_t direct_block_size = 1;
+  for (int i = 0; i < indirect_num; ++i) {
+    indirect_block_size = direct_block_size;
+    direct_block_size *= IO_BLOCK_SIZE;
+  }
 
   if ((*block_num) == 0) {
     if (allocate) {
       if ((err = datablock_manager->new_datablock(block_num)) < 0)
         return err;
     } else if (op->skip != nullptr) {
-      return (*(op->skip))(op, indirect_block_size * IO_BLOCK_SIZE);
+      return (*(op->skip))(op, direct_block_size);
     }
   }
 
@@ -152,6 +158,7 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
 
 class ReadDatablockOperation : public DatablockOperation {
 public:
+  ReadDatablockOperation() : DatablockOperation() {}
   int operation(u_int64_t block_num, bool *delete_block) override {
     char datablock_buf[IO_BLOCK_SIZE];
     int err;
@@ -182,6 +189,7 @@ public:
 
 class WriteDatablockOperation : public DatablockOperation {
 public:
+  WriteDatablockOperation() : DatablockOperation() {}
   int operation(u_int64_t block_num, bool *delete_block) override {
     char datablock_buf[IO_BLOCK_SIZE];
     int err;
@@ -209,14 +217,25 @@ public:
 
 class TruncateDatablockOperation : public DatablockOperation {
 public:
-  TruncateDatablockOperation() : skip(pass_skip_func) {}
+  TruncateDatablockOperation() : DatablockOperation(truncate_skip_func) {}
   int operation(u_int64_t block_num, bool *delete_block) override {
-    if (offset != 0)
+    char datablock_buf[IO_BLOCK_SIZE];
+    int err;
+
+    if (offset == 0) {
+      (*delete_block) = true;
       return 1;
+    }
+
+    if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
+      return err;
+
+    memset(&datablock_buf[offset], 0, IO_BLOCK_SIZE - offset);
+
+    if ((err = fs->disk->write_block(block_num, datablock_buf)) < 0)
+      return err;
 
     offset = 0;
-
-    delete_block = true;
 
     return 1;
   }
@@ -224,12 +243,13 @@ public:
 
 class LseekNextDataDatablockOperation : public DatablockOperation {
 public:
-  LseekNextDataDatablockOperation() : skip(default_skip_func) {}
+  LseekNextDataDatablockOperation() : DatablockOperation(default_skip_func) {}
   int operation(u_int64_t block_num, bool *delete_block) override { return 0; }
 };
 
 class LseekNextHoleDatablockOperation : public DatablockOperation {
 public:
+  LseekNextHoleDatablockOperation() : DatablockOperation() {}
   int operation(u_int64_t block_num, bool *delete_block) override {
     if (block_num == 0)
       return 0;
@@ -307,7 +327,7 @@ int Fs::truncate(INode_Data *inode_data, size_t length) {
   return 0;
 }
 
-int Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
+ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
   int err;
 
   if (offset >= inode_data->metadata.size)
@@ -332,7 +352,7 @@ int Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
   return op.bytes_completed;
 }
 
-int Fs::lseek_next_hole(INode_Data *inode_data, size_t offset) {
+ssize_t Fs::lseek_next_hole(INode_Data *inode_data, size_t offset) {
   int err;
 
   if (offset >= inode_data->metadata.size)

@@ -1,4 +1,5 @@
 #include "fs.hpp"
+#include <assert.h>
 
 Fs::Fs(RawDisk *disk) : disk(disk) {
   assert((disk->diskSize / IO_BLOCK_SIZE) >
