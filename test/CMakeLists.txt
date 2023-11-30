@@ -17,7 +17,6 @@ add_executable(${TARGET_LAYER1_API}
     # add need lib and source code here
     layer1_API.cpp
 
-    ../lib/fischl.cpp
     ../lib/rawdisk.cpp
     ../lib/fs/datablock_manager.cpp
     ../lib/fs/fs_data_types.cpp
