@@ -33,7 +33,7 @@ static const struct fuse_opt option_spec[] = {
 };
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
-
+    
 }
 
 int fischl_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -47,28 +47,28 @@ void fischl_destroy(void* private_data) {
 
 static int fischl_getattr(const char *path, struct stat *mode, struct fuse_file_info *fi) {
 
-	return 0;
+	return -1;
 }
 
 static int fischl_access(const char* path, int mask) {
-
-}
+    return -1;
+} 
 
 static int fischl_readlink(const char* path, char* buf, size_t size) {
-
+    return -1;
 }
 
 static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
-
+    return -1;
 }
 
 static int fischl_readdir(const char *path, void *buf, fuse_fill_dir_t t, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags) {
 
-	return 0;
+	return -1;
 }
 
 static int fischl_mknod(const char* path, mode_t mode, dev_t rdev) {
-
+    return -1;
 }
 
 static int fischl_mkdir(const char *path, mode_t mode) {
@@ -80,35 +80,35 @@ static int fischl_unlink(const char* path) {
 }
 
 static int fischl_rmdir(const char* path) {
-
+    return -1;
 }
 
 static int fischl_symlink(const char* to, const char* from) {
-
+    return -1;
 }
 
 static int fischl_rename(const char *path, const char *, unsigned int flags) {
-
+    return -1;
 }
 
 static int fischl_link(const char* from, const char* to) {
-
+    return -1;
 }
 
 static int fischl_chmod(const char *path, mode_t, struct fuse_file_info *fi) {
-
+    return -1;
 }
 
 static int fischl_chown(const char *path, uid_t, gid_t, struct fuse_file_info *fi) {
-
+    return -1;
 }
 
 static int fischl_truncate(const char *path, off_t, struct fuse_file_info *fi) {
-
+    return -1;
 }
 
 static int fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
-
+    return -1;
 }
 
 static int fischl_open(const char *path, struct fuse_file_info *fi) {
@@ -124,7 +124,7 @@ static int fischl_write(const char *path, const char *buf, size_t size, off_t of
 }
 
 static int fischl_statfs(const char* path, struct statvfs* stbuf) {
-
+    return -1;
 }
 
 static int fischl_release(const char* path, struct fuse_file_info *fi) {
@@ -132,19 +132,19 @@ static int fischl_release(const char* path, struct fuse_file_info *fi) {
 }
 
 static int fischl_releasedir(const char* path, struct fuse_file_info *fi) {
-
+    return -1;
 }
 
 static int fischl_bmap(const char* path, size_t blocksize, uint64_t* blockno) {
-
+    return -1;
 }
 
 static int fischl_ioctl(const char* path, int cmd, void* arg, struct fuse_file_info* fi, unsigned int flags, void* data) {
-
+    return -1;
 }
 
 static int fischl_poll(const char* path, struct fuse_file_info* fi, struct fuse_pollhandle* ph, unsigned* reventsp){
-
+    return -1;
 }
 
 
