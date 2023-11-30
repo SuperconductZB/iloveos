@@ -2,7 +2,7 @@
 
 #include <fuse.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
@@ -33,7 +33,9 @@ static const struct fuse_opt option_spec[] = {
 };
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
-    
+    options.fsop->initialize_rootinode();
+    perror("FUSE INITIALIZATION RUNNING");
+
 }
 
 int fischl_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -45,13 +47,31 @@ void fischl_destroy(void* private_data) {
 
 }
 
-static int fischl_getattr(const char *path, struct stat *mode, struct fuse_file_info *fi) {
+static int fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
 
-	return -1;
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = options.fsop->namei(path);
+
+	memset(stbuf, 0, sizeof(struct stat));
+	if (strcmp(path, "/") == 0) {
+		stbuf->st_mode = S_IFDIR | 0755;
+		stbuf->st_nlink = 2;
+	} else if (fh != -1) {
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+        // TO DO: make this the correct value
+		stbuf->st_size = 3;
+	} else
+		res = -ENOENT;
+
+	return res;
 }
 
 static int fischl_access(const char* path, int mask) {
-    return -1;
+
+    // return 0 when access is allowed
+    return 0;
 } 
 
 static int fischl_readlink(const char* path, char* buf, size_t size) {
@@ -59,6 +79,7 @@ static int fischl_readlink(const char* path, char* buf, size_t size) {
 }
 
 static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
+    perror(path);
     return -1;
 }
 
@@ -200,14 +221,15 @@ static void show_help(const char *progname)
 	       "\n");
 }
 
+
 int fischl(int argc, char *argv[])
 {
 	int ret;
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
     srand(time(NULL)); // Seed the random number generator
-    const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
+    //const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
-    //setupTestDirectory(&options.mock_root);
+    //setupTestDirectory(&options.root);
     options.H = new FakeRawDisk(21504);
     options.fs = new Fs(options.H);
     options.fs->format();
