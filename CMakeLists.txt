@@ -28,3 +28,14 @@ add_executable(fischl
 enable_testing()
 add_subdirectory(test)
 add_subdirectory(googletest)
+
+# Add the -Wall flag
+target_compile_options(fischl PRIVATE -Wall)
+
+# Use pkg-config to get flags for fuse3
+find_package(PkgConfig REQUIRED)
+pkg_search_module(FUSE3 REQUIRED fuse3)
+
+# Add the flags from pkg-config for fuse3
+target_include_directories(fischl PRIVATE ${FUSE3_INCLUDE_DIRS})
+target_link_libraries(fischl PRIVATE ${FUSE3_LIBRARIES})
