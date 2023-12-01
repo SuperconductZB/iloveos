@@ -124,7 +124,7 @@ static int fischl_read(const char* path, char *buf, size_t size, off_t offset, s
 }
 
 static int fischl_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-	return options.fsop->fischl_write(path, buf, size, offset, fi);
+    return options.fsop->fischl_write(path, buf, size, offset, fi);
 }
 
 static int fischl_statfs(const char* path, struct statvfs* stbuf) {
@@ -213,7 +213,7 @@ int fischl(int argc, char *argv[])
     //const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
     //setupTestDirectory(&options.root);
-    options.H = new FakeRawDisk(21504);
+    options.H = new FakeRawDisk(23552);
     options.fs = new Fs(options.H);
     options.fs->format();
     options.fsop = new FilesOperation(*options.H, options.fs);

@@ -567,15 +567,13 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     //     return -ENOENT;
     // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
     // based on current write_datablock API implement, when write_datablock pass with actual size not index this function should be fixed
+    
     INode_Data inode;
     // Assuming inode is correctly initialized here based on 'path'
     inode.inode_num = fi->fh;
     fs->inode_manager->load_inode(&inode);
     //size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
-
-    char buffer[size];
-    strcpy(buffer, buf);
-    printf("received offset %d\n", offset);
+    char *buffer = strdup(buf);
     size_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
@@ -590,7 +588,6 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         block_offset = 0;  // Only the first block might have a non-zero offset
     }*/
     fs->inode_manager->save_inode(&inode);
-    printf("received offset %llu\n", inode.metadata.size);
     return bytes_write;  // Return the actual number of bytes read
 }
 

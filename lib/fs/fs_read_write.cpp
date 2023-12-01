@@ -61,16 +61,13 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   int err;
   int result = -1;
 
-  printf("SURVIVED 1\n");
   if (allocate && (*block_num) == 0)
     if ((err = datablock_manager->new_datablock(block_num)) < 0)
       return err;
     
-  printf("SURVIVED 2 %d\n", indirect_num);
   if (indirect_num == 0)
     return op->operation(*block_num);
 
-  printf("SURVIVED 3\n");
   if ((*block_num) == 0) {
     memset(buf, 0, sizeof(buf));
   } else {
@@ -104,11 +101,9 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
     if (result == 0)
       break;
   }
-  printf("SURVIVED 4 %llu %d %llu\n", *block_num, result, this_layer_start_index);
   if (modified)
     if ((err = disk->write_block(*block_num, buf)) < 0)
       return err;
-  printf("SURVIVED 5 %d\n", result);
   return result;
 }
 
