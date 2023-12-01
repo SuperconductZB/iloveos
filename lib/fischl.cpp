@@ -48,24 +48,7 @@ void fischl_destroy(void* private_data) {
 }
 
 static int fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
-
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = options.fsop->namei(path);
-
-	memset(stbuf, 0, sizeof(struct stat));
-	if (strcmp(path, "/") == 0) {
-		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 2;
-	} else if (fh != -1) {
-		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_nlink = 1;
-        // TO DO: make this the correct value
-		stbuf->st_size = 3;
-	} else
-		res = -ENOENT;
-
-	return res;
+    return options.fsop->fischl_getattr(path, stbuf, fi);
 }
 
 static int fischl_access(const char* path, int mask) {
@@ -84,20 +67,8 @@ static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
     return 0;
 }
 
-static int fischl_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags) {
-	    //check path
-    u_int64_t fh = options.fsop->namei(path);
-
-    options.fsop->printDirectory(fh);
-
-    char a[][6] = {".", "..", "a.txt"};
-
-    // Iterate through the directory entries and fill the buffer using 'filler'
-    for (size_t i = 0; i < 3; ++i) {
-        filler(buf, a[i], NULL, 0, FUSE_FILL_DIR_PLUS);
-    }
-
-    return 0;
+static int fischl_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags flg) {
+    return options.fsop->fischl_readdir(path, buf, filler, ft, fi, flg);
 }
 
 static int fischl_mknod(const char* path, mode_t mode, dev_t rdev) {

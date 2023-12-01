@@ -283,6 +283,54 @@ int FilesOperation::fischl_create(const char* path, mode_t mode, struct fuse_fil
     return 0;//SUCESS
 }
 
+int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
+
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+	memset(stbuf, 0, sizeof(struct stat));
+	if (strcmp(path, "/") == 0) {
+		stbuf->st_mode = S_IFDIR | 0755;
+		stbuf->st_nlink = 2;
+	} else if (fh != -1) {
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+        // TO DO: make this the correct value
+		stbuf->st_size = 3;
+	} else
+		res = -ENOENT;
+
+	return res;
+}
+
+int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags flg) {
+	    //check path
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -1;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    char buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(buffer+i);
+            if (ent.inode_number) {
+                filler(buf, ent.file_name, NULL, 0, FUSE_FILL_DIR_PLUS);
+                //printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+            }
+        }
+    }
+
+    return 0;
+}
+
 void FilesOperation::unlink_inode(u_int64_t inode_number) {
     INode_Data inode;
     inode.inode_num = inode_number;
