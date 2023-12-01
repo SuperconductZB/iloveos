@@ -2,7 +2,7 @@
 #include "fs.hpp"
 #include <stdio.h>
 
-int main() {
+int main(int argc, char *argv[]) {
   //   printf("hello word!");
   //   fischl *F = new fischl;
   //   F->init();
@@ -34,6 +34,7 @@ int main() {
 
   // disk->print_block(1597);
 
+  /*
   int err;
 
   RawDisk *disk = new FakeRawDisk(2048);
@@ -80,7 +81,9 @@ int main() {
   printf("\n\nREAD: %d\n", err);
   for (int i = 0; i < N; ++i)
     printf("%d ", buf2[i]);
-  printf("\n");
+  printf("\n");*/
+
+  fischl(argc, argv);
 
   return 0;
 }
