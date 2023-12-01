@@ -98,7 +98,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
         DirectoryEntry ent;
         for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
             ent.deserialize(r_buffer+i);
-            if (strcmp(ent.file_name, name)==0) {
+            if (strcmp(ent.file_name, name)==0 && ent.inode_number != 0) {
                 if((mode & S_IFMT) == S_IFDIR){
                     fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
                 }else{
@@ -362,10 +362,15 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
         }
     }
     // TODO: This is probably incorrect
+    // size is unsigned int
     while(inode.metadata.size != 0) {
         printf("dealloc, %d\n", inode.metadata.size);
         u_int64_t dummy;
         fs->deallocate_datablock(&inode, &dummy);
+        if (inode.metadata.size < IO_BLOCK_SIZE){
+            inode.metadata.size = 0;
+            break;
+        }
         inode.metadata.size-=IO_BLOCK_SIZE;
     }
     fs->inode_manager->free_inode(&inode);
@@ -403,6 +408,7 @@ int FilesOperation::fischl_unlink(const char* path) {
             if (strcmp(ent.file_name, filename)==0) {
                 target_inode = ent.inode_number;
                 ent.inode_number = 0;
+                memset(ent.file_name, 0, sizeof(ent.file_name));
                 ent.serialize(rw_buffer+i);
                 break;
             }
