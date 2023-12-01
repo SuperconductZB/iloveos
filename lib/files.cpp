@@ -376,6 +376,99 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
     fs->inode_manager->free_inode(&inode);
 }
 
+int FilesOperation::fischl_rmdir(const char* path) {
+    char *pathdup = strdup(path);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0';
+    char *dirname = lastSlash+1;
+    char *ParentPath = pathdup;
+    if (!strcmp(dirname,".")||!strcmp(dirname,"..")) {
+        printf("refusing to remove . or ..\n");
+        return -1;
+    }
+    FileNode *parent_filenode = fischl_find_entry(root_node, ParentPath);
+    if (parent_filenode == NULL) {
+        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        free(pathdup);
+        return -1;
+    }
+    u_int64_t parent_inode_number = parent_filenode->inode_number;
+    u_int64_t target_inode = 0;
+    
+    // remove its record from parent
+    INode_Data parent_INode;
+    parent_INode.inode_num = parent_inode_number;
+    fs->inode_manager->load_inode(&parent_INode);
+    char rw_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(rw_buffer+i);
+            if (strcmp(ent.file_name, dirname)==0) {
+                target_inode = ent.inode_number;
+                ent.inode_number = 0;
+                memset(ent.file_name, 0, sizeof(ent.file_name));
+                ent.serialize(rw_buffer+i);
+                break;
+            }
+        }
+        if (target_inode) {
+            fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            break;
+        }
+    }
+    
+    // remove inode itself
+    if (target_inode) {
+        unlink_inode(target_inode);
+        // remove node itself and from parent hash
+        fischl_rm_entry(parent_filenode->subdirectory, dirname);
+        free(pathdup);
+        return 0;
+    } else {
+        printf("cannot find %s in %s", dirname, ParentPath);
+        free(pathdup);
+        return -1;
+    }
+}
+
+int FilesOperation::fischl_chmod(const char *path, mode_t mode, struct fuse_file_info *fi) {
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    inode.metadata.permissions = mode;
+    fs->inode_manager->save_inode(&inode);
+    return 0;
+}
+
+int FilesOperation::fischl_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi) {
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    inode.metadata.uid = uid;
+    inode.metadata.gid = gid;
+    fs->inode_manager->save_inode(&inode);
+    return 0;
+}
+
+
 int FilesOperation::fischl_unlink(const char* path) {
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
@@ -482,6 +575,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
 
     char buffer[size];
     strcpy(buffer, buf);
+    printf("received offset %d\n", offset);
     size_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
@@ -496,6 +590,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         block_offset = 0;  // Only the first block might have a non-zero offset
     }*/
     fs->inode_manager->save_inode(&inode);
+    printf("received offset %llu\n", inode.metadata.size);
     return bytes_write;  // Return the actual number of bytes read
 }
 

@@ -84,7 +84,7 @@ static int fischl_unlink(const char* path) {
 }
 
 static int fischl_rmdir(const char* path) {
-    return -1;
+    return options.fsop->fischl_rmdir(path);
 }
 
 static int fischl_symlink(const char* to, const char* from) {
@@ -99,12 +99,12 @@ static int fischl_link(const char* from, const char* to) {
     return -1;
 }
 
-static int fischl_chmod(const char *path, mode_t, struct fuse_file_info *fi) {
-    return -1;
+static int fischl_chmod(const char *path, mode_t mode, struct fuse_file_info *fi) {
+    return options.fsop->fischl_chmod(path, mode, fi);
 }
 
-static int fischl_chown(const char *path, uid_t, gid_t, struct fuse_file_info *fi) {
-    return -1;
+static int fischl_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi) {
+    return options.fsop->fischl_chown(path, uid, gid, fi);
 }
 
 static int fischl_truncate(const char *path, off_t, struct fuse_file_info *fi) {
@@ -136,7 +136,7 @@ static int fischl_release(const char* path, struct fuse_file_info *fi) {
 }
 
 static int fischl_releasedir(const char* path, struct fuse_file_info *fi) {
-    return -1;
+    return options.fsop->fischl_releasedir(path, fi);
 }
 
 static int fischl_bmap(const char* path, size_t blocksize, uint64_t* blockno) {
@@ -160,12 +160,12 @@ static const struct fuse_operations fischl_oper = {
     .mknod       = fischl_mknod,
     .mkdir       = fischl_mkdir,
     .unlink      = fischl_unlink,
-    //.rmdir       = fischl_rmdir,
+    .rmdir       = fischl_rmdir,
     //.symlink     = fischl_symlink,
     //.rename      = fischl_rename,
     //.link        = fischl_link,
-    //.chmod       = fischl_chmod,
-    //.chown       = fischl_chown,
+    .chmod       = fischl_chmod,
+    .chown       = fischl_chown,
     //.truncate    = fischl_truncate,
     .open        = fischl_open,
     .read        = fischl_read,

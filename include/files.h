@@ -27,6 +27,9 @@ class FilesOperation {
     int fischl_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);
     int fischl_releasedir(const char* path, struct fuse_file_info *fi);
     int fischl_unlink (const char *);
+    int fischl_rmdir(const char *);
+    int fischl_chmod(const char *path, mode_t, struct fuse_file_info *fi);
+    int fischl_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi);
     int fischl_open (const char *, struct fuse_file_info *);//open file
     int fischl_release (const char *, struct fuse_file_info *);//close file
     int fischl_write(const char *, const char *, size_t, off_t, struct fuse_file_info *);

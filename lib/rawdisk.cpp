@@ -123,6 +123,8 @@ int FakeRawDisk::read_block(u_int64_t block_number, char *buffer) {
 int FakeRawDisk::write_block(u_int64_t block_number, char *buffer) {
   u_int64_t offset = block_number * IO_BLOCK_SIZE;
 
+  printf("fake disk write: %llu %llu %llu\n", block_number, offset, diskSize);
+
   if (offset + IO_BLOCK_SIZE > diskSize) {
     perror("Error writing past fake disk size");
     return -1;
