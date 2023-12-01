@@ -573,7 +573,10 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     inode.inode_num = fi->fh;
     fs->inode_manager->load_inode(&inode);
     //size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
-    char *buffer = strdup(buf);
+    // Determine the length of the buffer
+    // Allocate memory for the new buffer
+    char* buffer = (char*)malloc(size);
+    memcpy(buffer, buf, size);
     size_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
@@ -588,6 +591,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         block_offset = 0;  // Only the first block might have a non-zero offset
     }*/
     fs->inode_manager->save_inode(&inode);
+    free(buffer);
     return bytes_write;  // Return the actual number of bytes read
 }
 
