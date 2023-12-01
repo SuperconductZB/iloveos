@@ -288,20 +288,25 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
     (void) fi;
 	int res = 0;
     u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
 
 	memset(stbuf, 0, sizeof(struct stat));
-	if (strcmp(path, "/") == 0) {
+	if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
 		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 2;
-	} else if (fh != -1) {
+		stbuf->st_nlink = inode.metadata.reference_count;
+	} else {
 		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_nlink = 1;
-        // TO DO: make this the correct value
-		stbuf->st_size = 3;
-	} else
-		res = -ENOENT;
-
+		stbuf->st_nlink = inode.metadata.reference_count;
+		stbuf->st_size = inode.metadata.size;
+	}
+    perror(std::to_string(inode.metadata.size).c_str());
 	return res;
 }
 
@@ -330,6 +335,14 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
     }
 
     return 0;
+}
+
+int FilesOperation::fischl_releasedir(const char *path, struct fuse_file_info *fi){
+    if(fischl_find_entry(root_node, path) == NULL)
+        return -ENOENT;
+    //do with file descriptor that cannot be used
+    fi->fh = -1;
+    return 0;//SUCESS
 }
 
 void FilesOperation::unlink_inode(u_int64_t inode_number) {
@@ -459,10 +472,12 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     // Assuming inode is correctly initialized here based on 'path'
     inode.inode_num = fi->fh;
     fs->inode_manager->load_inode(&inode);
-    size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
+    //size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
 
-    size_t bytes_write = 0;
-    size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
+    char buffer[size];
+    strcpy(buffer, buf);
+    size_t bytes_write = fs->write(&inode, buffer, size, offset);
+    /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
     while (bytes_write < size) {
         char block_buffer[IO_BLOCK_SIZE];  // Temporary buffer for each block
@@ -473,7 +488,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
         bytes_write += copy_size;
         block_index++;
         block_offset = 0;  // Only the first block might have a non-zero offset
-    }
+    }*/
     fs->inode_manager->save_inode(&inode);
     return bytes_write;  // Return the actual number of bytes read
 }
@@ -494,7 +509,8 @@ int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t 
     // Assuming inode is correctly initialized here based on 'path'
     inode.inode_num = fi->fh;
     fs->inode_manager->load_inode(&inode);
-    size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
+    size_t bytes_read = fs->read(&inode, buf, size, offset);
+    /*size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
 
     if (offset >= len) return 0;  // Offset is beyond the end of the file
     if (offset + size > len) size = len - offset;  // Adjust size if it goes beyond EOF
@@ -513,7 +529,7 @@ int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t 
         bytes_read += copy_size;
         block_index++;
         block_offset = 0;  // Only the first block might have a non-zero offset
-    }
+    }*/
 
     return bytes_read;  // Return the actual number of bytes read
 }

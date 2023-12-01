@@ -182,7 +182,7 @@ static const struct fuse_operations fischl_oper = {
 */
     .opendir     = fischl_opendir,
     .readdir     = fischl_readdir,
-    //.releasedir  = fischl_releasedir,
+    .releasedir  = fischl_releasedir,
     .init        = fischl_init,
     .destroy     = fischl_destroy,
     .access      = fischl_access,
