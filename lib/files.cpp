@@ -288,6 +288,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
     (void) fi;
 	int res = 0;
     u_int64_t fh = namei(path);
+    fs->inode_manager->load_inode(&inode);
 
 	memset(stbuf, 0, sizeof(struct stat));
 	if (strcmp(path, "/") == 0) {
