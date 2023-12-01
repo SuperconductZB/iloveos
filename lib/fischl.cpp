@@ -107,8 +107,8 @@ static int fischl_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file
     return options.fsop->fischl_chown(path, uid, gid, fi);
 }
 
-static int fischl_truncate(const char *path, off_t, struct fuse_file_info *fi) {
-    return -1;
+static int fischl_truncate(const char *path, off_t offset, struct fuse_file_info *fi) {
+    return options.fsop->fischl_truncate(path, offset, fi);
 }
 
 static int fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
@@ -166,7 +166,7 @@ static const struct fuse_operations fischl_oper = {
     //.link        = fischl_link,
     .chmod       = fischl_chmod,
     .chown       = fischl_chown,
-    //.truncate    = fischl_truncate,
+    .truncate    = fischl_truncate,
     .open        = fischl_open,
     .read        = fischl_read,
     .write       = fischl_write,

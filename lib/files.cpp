@@ -591,6 +591,33 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     return bytes_write;  // Return the actual number of bytes read
 }
 
+int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_file_info *fi){
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    while(inode.metadata.size > offset + IO_BLOCK_SIZE) {
+        printf("dealloc, %d\n", inode.metadata.size);
+        u_int64_t dummy;
+        fs->deallocate_datablock(&inode, &dummy);
+        if (inode.metadata.size < IO_BLOCK_SIZE){
+            inode.metadata.size = 0;
+            break;
+        }
+        inode.metadata.size-=IO_BLOCK_SIZE;
+    }
+    inode.metadata.size = offset;
+    fs->inode_manager->save_inode(&inode);
+    return 0;
+}
+
 int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
     /** Read data from an open file
 	 *

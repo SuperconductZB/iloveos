@@ -205,8 +205,8 @@ ssize_t Fs::write(INode_Data *inode_data, char buf[], size_t count,
       0)
     return err;
 
-  inode_data->metadata.size = offset + op.bytes_completed;
-      //std::max(offset + op.bytes_completed, inode_data->metadata.size);
+  inode_data->metadata.size = 
+      std::max(offset + op.bytes_completed, inode_data->metadata.size);
 
   printf("written %d\n", op.bytes_completed);
 
