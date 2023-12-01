@@ -1,4 +1,6 @@
 //#include "fuse.h" add this when layer3
+#define FUSE_USE_VERSION 31
+
 #include "files.h"
 #include <string.h>
 #include <sstream>

@@ -1,6 +1,6 @@
 #include <sys/types.h>
 #include <fs.hpp>
-#include "fuse_common.h"
+#include <fuse.h>
 #include "direntry.h"
 
 class FilesOperation {
@@ -23,7 +23,7 @@ class FilesOperation {
     int fischl_mkdir(const char*, mode_t);
     int fischl_mknod(const char*, mode_t, dev_t);//for special file
     int fischl_create(const char *, mode_t, struct fuse_file_info *);//for regular file
-    //int fischl_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);
+    int fischl_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);
     int fischl_unlink (const char *);
     int fischl_open (const char *, struct fuse_file_info *);//open file
     int fischl_release (const char *, struct fuse_file_info *);//close file
