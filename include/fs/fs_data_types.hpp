@@ -25,12 +25,14 @@ public:
   u_int64_t inode_num;
 
 #define NUMBER_OF_METADATA_BYTES                                               \
-  (4 * sizeof(u_int64_t) + (2 * sizeof(u_int32_t)))
+  (6 * sizeof(u_int64_t) + (2 * sizeof(u_int32_t)))
   struct INode_MetaData {
     u_int64_t uid;
     u_int64_t gid;
     u_int64_t permissions;
     u_int64_t size; // not yet implemented
+    u_int64_t access_time;
+    u_int64_t modification_time;
     u_int32_t reference_count;
     u_int32_t flags;
   } metadata;

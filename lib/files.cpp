@@ -303,6 +303,8 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
 		stbuf->st_nlink = 2;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
+        stbuf->st_atime = (time_t)(inode.metadata.access_time / 1000000000ULL);
+        stbuf->st_mtime = (time_t)(inode.metadata.modification_time / 1000000000ULL);
         stbuf->st_ino = inode.inode_num;
 	} else if(S_ISLNK(inode.metadata.permissions)){
         printf("THIS IS GOOD %d %llu\n", inode.metadata.size, inode.inode_num);
@@ -310,6 +312,8 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
 		stbuf->st_nlink = 1;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
+        stbuf->st_atime = (time_t)(inode.metadata.access_time / 1000000000ULL);
+        stbuf->st_mtime = (time_t)(inode.metadata.modification_time / 1000000000ULL);
         stbuf->st_size = inode.metadata.size;
         stbuf->st_ino = inode.inode_num;
     } else {
@@ -317,6 +321,8 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
 		stbuf->st_nlink = inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
+        stbuf->st_atime = (time_t)(inode.metadata.access_time / 1000000000ULL);
+        stbuf->st_mtime = (time_t)(inode.metadata.modification_time / 1000000000ULL);
 		stbuf->st_size = inode.metadata.size;
         stbuf->st_ino = inode.inode_num;
 	}
@@ -624,7 +630,7 @@ int FilesOperation::fischl_readlink(const char* path, char* buf, size_t size){
     //char buffer[symlink_inode.metadata.size];
     //memset(buffer, 0, sizeof(buffer));
     fs->read(&symlink_inode, buf, symlink_inode.metadata.size, 0);
-    printf("READLINK %d %s\n", symlink_inode.metadata.size, buf);
+    //printf("READLINK %d %s\n", symlink_inode.metadata.size, buf);
     /*u_int64_t fh = namei(buffer);
     if (fh == -1){
         return -ENOENT;
@@ -946,4 +952,22 @@ int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t 
     }*/
 
     return bytes_read;  // Return the actual number of bytes read
+}
+
+int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi){
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    inode.metadata.access_time = (u_int64_t)tv[0].tv_sec * 1000000000ULL + tv[0].tv_nsec;
+    inode.metadata.modification_time = (u_int64_t)tv[1].tv_sec * 1000000000ULL + tv[1].tv_nsec;
+    fs->inode_manager->save_inode(&inode);
+    return 0;
 }
