@@ -581,6 +581,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     // Allocate memory for the new buffer
     char* buffer = (char*)malloc(size);
     memcpy(buffer, buf, size);
+    printf("SOME DATA %d %d\n", (int)buffer[0], (int)buffer[1]);
     size_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block

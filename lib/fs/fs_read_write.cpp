@@ -15,8 +15,8 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
                                DatablockOperation *op) {
   int result;
 
-  printf("%llu %llu %llu\n", NUMBER_OF_DIRECT_BLOCKS, INDIRECT_BLOCKS, INDIRECT_BLOCKS * INDIRECT_BLOCKS);
-
+  printf("NOW AT %llu %llu %llu %llu %llu\n", NUMBER_OF_DIRECT_BLOCKS, INDIRECT_BLOCKS, INDIRECT_BLOCKS * INDIRECT_BLOCKS, inode_data->single_indirect_block, inode_data->double_indirect_block);
+  
   u_int64_t start_index = start_block_index;
   for (size_t i = start_index; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {
     if ((result = sweep_datablocks(&(inode_data->direct_blocks[i]), 0, 0,
@@ -63,14 +63,14 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   int err;
   int result = -1;
 
-  //printf("SWEEP %llu %d %llu %d\n", *block_num, indirect_num, start_block_index, int(allocate));
-
-  if (allocate && (*block_num) == 0)
+  if (allocate && (*block_num) == 0){
     if ((err = datablock_manager->new_datablock(block_num)) < 0)
       return err;
+  }
     
-  if (indirect_num == 0)
+  if (indirect_num == 0){
     return op->operation(*block_num);
+  }
 
   if ((*block_num) == 0) {
     memset(buf, 0, sizeof(buf));
@@ -91,7 +91,6 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   u_int64_t temp;
   u_int64_t next_block_num;
   bool modified = false;
-  //printf("SWEEP TO LOWER LEVEL %llu %llu %llu\n", this_layer_start_index, next_layer_start_index, indirect_block_size);
 
   for (size_t i = this_layer_start_index * sizeof(u_int64_t); i < IO_BLOCK_SIZE;
        i += sizeof(u_int64_t)) {
@@ -106,6 +105,7 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
     }
     if (result == 0)
       break;
+    next_layer_start_index = 0;
   }
   if (modified)
     if ((err = disk->write_block(*block_num, buf)) < 0)
@@ -205,16 +205,12 @@ ssize_t Fs::write(INode_Data *inode_data, char buf[], size_t count,
   op.bytes_completed = 0;
   op.disk = disk;
 
-  printf("trying to write %d %llu %llu\n", op.count, offset, start_block_index);
-
   if ((err = sweep_inode_datablocks(inode_data, start_block_index, true, &op)) <
       0)
     return err;
 
   inode_data->metadata.size = 
       std::max(offset + op.bytes_completed, inode_data->metadata.size);
-
-  printf("written %d\n", op.bytes_completed);
 
   return op.bytes_completed;
 }
