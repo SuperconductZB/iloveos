@@ -34,8 +34,6 @@ static const struct fuse_opt option_spec[] = {
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
     options.fsop->initialize_rootinode();
-    perror("FUSE INITIALIZATION RUNNING");
-
 }
 
 int fischl_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -91,8 +89,8 @@ static int fischl_symlink(const char* to, const char* from) {
     return -1;
 }
 
-static int fischl_rename(const char *path, const char *, unsigned int flags) {
-    return -1;
+static int fischl_rename(const char *path, const char *new_name, unsigned int flags) {
+    return options.fsop->fischl_rename(path, new_name, flags);
 }
 
 static int fischl_link(const char* from, const char* to) {
@@ -139,18 +137,6 @@ static int fischl_releasedir(const char* path, struct fuse_file_info *fi) {
     return options.fsop->fischl_releasedir(path, fi);
 }
 
-static int fischl_bmap(const char* path, size_t blocksize, uint64_t* blockno) {
-    return -1;
-}
-
-static int fischl_ioctl(const char* path, int cmd, void* arg, struct fuse_file_info* fi, unsigned int flags, void* data) {
-    return -1;
-}
-
-static int fischl_poll(const char* path, struct fuse_file_info* fi, struct fuse_pollhandle* ph, unsigned* reventsp){
-    return -1;
-}
-
 
 static const struct fuse_operations fischl_oper = {
 	
@@ -162,7 +148,7 @@ static const struct fuse_operations fischl_oper = {
     .unlink      = fischl_unlink,
     .rmdir       = fischl_rmdir,
     //.symlink     = fischl_symlink,
-    //.rename      = fischl_rename,
+    .rename      = fischl_rename,
     //.link        = fischl_link,
     .chmod       = fischl_chmod,
     .chown       = fischl_chown,

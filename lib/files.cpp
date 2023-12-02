@@ -329,7 +329,7 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
             ent.deserialize(buffer+i);
             if (ent.inode_number) {
                 filler(buf, ent.file_name, NULL, 0, FUSE_FILL_DIR_PLUS);
-                //printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+                printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
             }
         }
     }
@@ -593,6 +593,154 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     fs->inode_manager->save_inode(&inode);
     free(buffer);
     return bytes_write;  // Return the actual number of bytes read
+}
+
+int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode) {
+    // trys to create a file under parent directory
+    if (strlen(name)>=256) {
+        perror("Name too long, cannot create file or directory");
+        return -1;
+    }
+    INode_Data inode;
+    inode.inode_num = parent_inode_number;
+    fs->inode_manager->load_inode(&inode);
+    if ((inode.metadata.permissions & S_IFMT) != S_IFDIR) {
+        fprintf(stderr,"[%s ,%d] please create under directory\n",__func__,__LINE__);
+        return -1;
+    }
+
+    // Check if file or directory already exists
+    char r_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&inode, r_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(r_buffer+i);
+            if (strcmp(ent.file_name, name)==0 && ent.inode_number != 0) {
+                if((new_inode->metadata.permissions & S_IFMT) == S_IFDIR){
+                    fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
+                }else{
+                    fprintf(stderr,"[%s ,%d] %s already exists\n",__func__,__LINE__, name);
+                }                  
+                return -1;
+            }
+        }
+    }
+
+    bool allocated = false;
+
+    char rw_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(rw_buffer+i);
+            if (ent.inode_number == 0) {
+                allocated = true;
+                ent.inode_number = new_inode->inode_num;
+                strcpy(ent.file_name, name);
+                ent.serialize(rw_buffer+i);
+                break;
+            }
+        }
+        if (allocated) {
+            fs->write(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            break;
+        }
+    }
+
+    if (!allocated) {
+        char write_buffer[IO_BLOCK_SIZE] = {0};
+        DirectoryEntry ent;
+        ent.inode_number = new_inode->inode_num;
+        strcpy(ent.file_name, name);
+        ent.serialize(write_buffer);
+        fs->write(&inode, write_buffer, IO_BLOCK_SIZE, (inode.metadata.size/IO_BLOCK_SIZE)*IO_BLOCK_SIZE);
+        fs->inode_manager->save_inode(&inode);
+    }
+
+    return 0;
+}
+
+int FilesOperation::fischl_rename(const char *path, const char *new_name, unsigned int flags){
+    char *pathdup = strdup(path);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0';
+    char *filename = lastSlash+1;
+    char *ParentPath = pathdup;
+    if (!strcmp(filename,".")||!strcmp(filename,"..")) {
+        printf("refusing to remove . or ..\n");
+        return -1;
+    }
+    FileNode *parent_filenode = fischl_find_entry(root_node, ParentPath);
+    if (parent_filenode == NULL) {
+        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        free(pathdup);
+        return -1;
+    }
+    u_int64_t parent_inode_number = parent_filenode->inode_number;
+    u_int64_t target_inode = 0;
+    
+    // remove its record from parent
+    INode_Data parent_INode;
+    parent_INode.inode_num = parent_inode_number;
+    fs->inode_manager->load_inode(&parent_INode);
+    char rw_buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
+        fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        DirectoryEntry ent;
+        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+            ent.deserialize(rw_buffer+i);
+            if (strcmp(ent.file_name, filename)==0) {
+                target_inode = ent.inode_number;
+                ent.inode_number = 0;
+                memset(ent.file_name, 0, sizeof(ent.file_name));
+                ent.serialize(rw_buffer+i);
+                break;
+            }
+        }
+        if (target_inode) {
+            fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            break;
+        }
+    }
+    
+    // remove inode itself
+    if (target_inode) {
+        INode_Data ret;
+        ret.inode_num = target_inode;
+        fs->inode_manager->load_inode(&ret);
+        fischl_rm_entry(parent_filenode->subdirectory, filename);
+
+        printf("FOUND INODE AT %llu %s\n", target_inode, new_name);
+        char *pathdup2 = strdup(new_name);
+        char *lastSlash2 = strrchr(pathdup2, '/');
+        *lastSlash2 = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+        char *newDirname2 = lastSlash2+1; //\0<direcotry name>, get from <direcotry name>
+        char *ParentPath2 = pathdup2;//pathdup are separated by pathdup, so it take <parent path> only
+
+        FileNode *parent_filenode2 = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath2): root_node->self_info;
+        if (parent_filenode2 == NULL) {
+            fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath2);
+            free(pathdup2);
+            return -ENOENT;//parentpath directory does not exist
+        }
+        u_int64_t parent_inode_number = parent_filenode->inode_number;
+        //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
+        //make new inode
+        if(insert_inode_to(parent_inode_number, newDirname2, &ret)<0){
+            return -1;
+        }
+        fischl_add_entry(parent_filenode->subdirectory, ret.inode_num, newDirname2, &ret);
+        free(pathdup);
+        // remove node itself and from parent hash
+        free(pathdup2);
+        return 0;
+    } else {
+        printf("cannot find %s in %s", filename, ParentPath);
+        free(pathdup);
+        return -1;
+    }
 }
 
 int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_file_info *fi){
