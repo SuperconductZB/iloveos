@@ -56,7 +56,7 @@ static int fischl_access(const char* path, int mask) {
 } 
 
 static int fischl_readlink(const char* path, char* buf, size_t size) {
-    return -1;
+    return options.fsop->fischl_readlink(path, buf, size);
 }
 
 static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
@@ -85,8 +85,8 @@ static int fischl_rmdir(const char* path) {
     return options.fsop->fischl_rmdir(path);
 }
 
-static int fischl_symlink(const char* to, const char* from) {
-    return -1;
+static int fischl_symlink(const char* from, const char* to) {
+    return options.fsop->fischl_symlink(from, to);
 }
 
 static int fischl_rename(const char *path, const char *new_name, unsigned int flags) {
@@ -142,12 +142,12 @@ static const struct fuse_operations fischl_oper = {
 	
     
     .getattr     = fischl_getattr,
-    //.readlink    = fischl_readlink,
+    .readlink    = fischl_readlink,
     .mknod       = fischl_mknod,
     .mkdir       = fischl_mkdir,
     .unlink      = fischl_unlink,
     .rmdir       = fischl_rmdir,
-    //.symlink     = fischl_symlink,
+    .symlink     = fischl_symlink,
     .rename      = fischl_rename,
     .link        = fischl_link,
     .chmod       = fischl_chmod,

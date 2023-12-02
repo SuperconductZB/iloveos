@@ -304,7 +304,15 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
         stbuf->st_ino = inode.inode_num;
-	} else {
+	} else if(S_ISLNK(inode.metadata.permissions)){
+        printf("THIS IS GOOD %d %llu\n", inode.metadata.size, inode.inode_num);
+        stbuf->st_mode = S_IFLNK;
+		stbuf->st_nlink = 1;//inode.metadata.reference_count;
+        stbuf->st_uid = inode.metadata.uid;
+        stbuf->st_gid = inode.metadata.gid;
+        stbuf->st_size = inode.metadata.size;
+        stbuf->st_ino = inode.inode_num;
+    } else {
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
@@ -604,6 +612,63 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     fs->inode_manager->save_inode(&inode);
     free(buffer);
     return bytes_write;  // Return the actual number of bytes read
+}
+
+int FilesOperation::fischl_readlink(const char* path, char* buf, size_t size){
+    FileNode *get_file;
+    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+        return -ENOENT;
+    INode_Data symlink_inode;
+    symlink_inode.inode_num = get_file->inode_number;
+    fs->inode_manager->load_inode(&symlink_inode);
+    //char buffer[symlink_inode.metadata.size];
+    //memset(buffer, 0, sizeof(buffer));
+    fs->read(&symlink_inode, buf, symlink_inode.metadata.size, 0);
+    printf("READLINK %d %s\n", symlink_inode.metadata.size, buf);
+    /*u_int64_t fh = namei(buffer);
+    if (fh == -1){
+        return -ENOENT;
+    }
+    INode_Data inode;
+    // Assuming inode is correctly initialized here based on 'path'
+    inode.inode_num = fh;
+    fs->inode_manager->load_inode(&inode);
+    size_t bytes_read = fs->read(&inode, buf, size, 0);
+    printf("READLINK %d %s\n", bytes_read, buf);*/
+    return 0;
+}
+
+int FilesOperation::fischl_symlink(const char* to, const char* from){
+    //check path
+    //printf("SYMLINK %s %s\n", from, to);
+    char *pathdup = strdup(from);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+    // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    if (parent_filenode == NULL) {
+        fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
+        free(pathdup);
+        return -1;
+    }
+    u_int64_t parent_inode_number = parent_filenode->inode_number;
+    //make new inode
+    INode_Data* ret = create_new_inode(parent_inode_number, newFilename, S_IFLNK);
+    if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
+    //make new node in RAM
+    fischl_add_entry(parent_filenode->subdirectory, ret->inode_num, newFilename, ret);
+    size_t size = strlen(to);
+    char* buffer = (char*)malloc(size);
+    memcpy(buffer, to, size);
+    //printf("%d %s\n", size, buffer);
+    size_t bytes_write = fs->write(ret, buffer, size, 0);
+    free(buffer);
+    free(pathdup);
+    fs->inode_manager->save_inode(ret);
+    //printf("%d %d %llu\n", bytes_write, ret->metadata.size, ret->inode_num);
+    return 0;//SUCESS
 }
 
 int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode) {
