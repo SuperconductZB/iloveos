@@ -301,9 +301,13 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
 	if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = inode.metadata.reference_count;
+        stbuf->st_uid = inode.metadata.uid;
+        stbuf->st_gid = inode.metadata.gid;
 	} else {
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = inode.metadata.reference_count;
+        stbuf->st_uid = inode.metadata.uid;
+        stbuf->st_gid = inode.metadata.gid;
 		stbuf->st_size = inode.metadata.size;
 	}
     perror(std::to_string(inode.metadata.size).c_str());
@@ -662,6 +666,8 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
     return 0;
 }
 
+
+// TODO: rename dir and rename fail
 int FilesOperation::fischl_rename(const char *path, const char *new_name, unsigned int flags){
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
@@ -693,14 +699,10 @@ int FilesOperation::fischl_rename(const char *path, const char *new_name, unsign
             ent.deserialize(rw_buffer+i);
             if (strcmp(ent.file_name, filename)==0) {
                 target_inode = ent.inode_number;
-                ent.inode_number = 0;
-                memset(ent.file_name, 0, sizeof(ent.file_name));
-                ent.serialize(rw_buffer+i);
                 break;
             }
         }
-        if (target_inode) {
-            fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+        if (target_inode){
             break;
         }
     }
@@ -710,7 +712,14 @@ int FilesOperation::fischl_rename(const char *path, const char *new_name, unsign
         INode_Data ret;
         ret.inode_num = target_inode;
         fs->inode_manager->load_inode(&ret);
-        fischl_rm_entry(parent_filenode->subdirectory, filename);
+
+        if (flags == RENAME_EXCHANGE){
+            printf("RENAME_EXCHANGE ");
+        }
+        else if (flags == RENAME_NOREPLACE){
+            printf("RENAME_NOREPLACE ");
+        }
+        else printf("ELSE ");
 
         printf("FOUND INODE AT %llu %s\n", target_inode, new_name);
         char *pathdup2 = strdup(new_name);
@@ -725,13 +734,34 @@ int FilesOperation::fischl_rename(const char *path, const char *new_name, unsign
             free(pathdup2);
             return -ENOENT;//parentpath directory does not exist
         }
-        u_int64_t parent_inode_number = parent_filenode->inode_number;
+        u_int64_t parent_inode_number2 = parent_filenode2->inode_number;
         //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
         //make new inode
-        if(insert_inode_to(parent_inode_number, newDirname2, &ret)<0){
+        if(insert_inode_to(parent_inode_number2, newDirname2, &ret)<0){
             return -1;
         }
-        fischl_add_entry(parent_filenode->subdirectory, ret.inode_num, newDirname2, &ret);
+
+        for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
+            fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            DirectoryEntry ent;
+            for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+                ent.deserialize(rw_buffer+i);
+                if (strcmp(ent.file_name, filename)==0) {
+                    target_inode = ent.inode_number;
+                    ent.inode_number = 0;
+                    memset(ent.file_name, 0, sizeof(ent.file_name));
+                    ent.serialize(rw_buffer+i);
+                    break;
+                }
+            }
+            if (target_inode) {
+                fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+                break;
+            }
+        }
+
+        fischl_rm_entry(parent_filenode->subdirectory, filename);
+        fischl_add_entry(parent_filenode2->subdirectory, ret.inode_num, newDirname2, &ret);
         free(pathdup);
         // remove node itself and from parent hash
         free(pathdup2);
