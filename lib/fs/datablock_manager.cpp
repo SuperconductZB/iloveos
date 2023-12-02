@@ -58,6 +58,10 @@ int DataBlock_Manager_Bitmap::new_datablock(u_int64_t *block_num) {
   if ((err = fs->disk->read_block(bitmap_block_num, bitmap.buf)) < 0)
     return err;
 
+  // if (bitmap.get_next_node() == fs->superblock.free_list_head)
+  //   printf("WARNING: ON LAST BITMAP "
+  //          "BLOCK!\n");
+
   u_int64_t relative_block_num = bitmap.claim_relative_block();
 
   if (relative_block_num == 0)

@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
   // err = fs->lseek_next_hole(&inode_data, offs + 100000);
   // printf("lseek_next_hole (%d): %d\n\n", offs + 100000, err);
 
-  RawDisk *disk = new FakeRawDisk(5000);
+  RawDisk *disk = new FakeRawDisk(5120);
   Fs *fs = new Fs(disk);
   fs->format();
 
@@ -188,40 +188,52 @@ int main(int argc, char *argv[]) {
   u_int64_t test_start_range = IO_BLOCK_SIZE * 3584;
   u_int64_t test_io_range = IO_BLOCK_SIZE * 100;
 
-  char ones[test_io_range];
-  memset(ones, 1, test_io_range);
-  char twos[test_io_range];
-  memset(twos, 2, test_io_range);
+  // char ones[test_io_range];
+  // memset(ones, 1, test_io_range);
+  // char twos[test_io_range];
+  // memset(twos, 2, test_io_range);
 
-  char *write_buf = ones;
+  char write_buf[test_io_range];
   char reference_read_buf[test_io_range];
   char test_read_buf[test_io_range];
   size_t offset, count;
   int test_res, ref_res;
   bool reads_are_equal;
-  bool canwrite;
+  int num;
 
-  size_t weird_offset = 6508064;
+  // size_t weird_offset = 6508064;
 
   for (int i = 0; i < 100000; ++i) {
     offset = rand() % test_start_range;
 
     reads_are_equal = true;
+    num = rand() % 100;
+    if (num < 49)
+      num = 0;
+    else if (num < 99)
+      num = 1;
+    else
+      num = 2;
 
-    switch (rand() % 3) {
+    if (i % 100 == 0)
+      printf("%d\n", i);
+
+    switch (num) {
     case 0:
       count = rand() % test_io_range;
-      write_buf = (write_buf == ones) ? twos : ones;
-      if (offset <= weird_offset && (count + offset) > weird_offset)
-        printf("write: %ds count=%d offset=%d\n", write_buf[0], count, offset);
+      memset(write_buf, i, count);
+      // write_buf = (write_buf == ones) ? twos : ones;
+      // if (offset <= weird_offset && (count + offset) > weird_offset ||
+      //     ((char)i == -77))
+      // printf("write: %ds count=%d offset=%d\n", write_buf[0], count, offset);
       test_res = fs->write(&inode_data, write_buf, count, offset);
       assert(lseek(fd, offset, SEEK_SET) == offset);
       ref_res = write(fd, write_buf, count);
       break;
     case 1:
       count = rand() % test_io_range;
-      if (offset <= weird_offset && (count + offset) > weird_offset)
-        printf("read: count=%d offset=%d\n", count, offset);
+      // if (offset <= weird_offset && (count + offset) > weird_offset)
+      // printf("read: count=%d offset=%d\n", count, offset);
       test_res = fs->read(&inode_data, test_read_buf, count, offset);
       assert(lseek(fd, offset, SEEK_SET) == offset);
       ref_res = read(fd, reference_read_buf, count);
@@ -232,14 +244,14 @@ int main(int argc, char *argv[]) {
         }
       break;
     case 2:
-      if (offset <= weird_offset)
-        printf("truncate: length=%d\n", offset);
+      // if (offset <= weird_offset)
+      // printf("truncate: length=%d\n", offset);
       test_res = fs->truncate(&inode_data, offset);
       ref_res = ftruncate(fd, offset);
       break;
     }
 
-    //   printf("test_res=%d, ref_res=%d\n", test_res, ref_res);
+    // printf("test_res=%d, ref_res=%d\n", test_res, ref_res);
     assert(test_res == ref_res);
 
     if (!reads_are_equal && count > 0) {
