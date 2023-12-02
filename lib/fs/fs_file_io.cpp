@@ -1,7 +1,5 @@
 #include "fs.hpp"
 
-const u_int64_t INDIRECT_BLOCKS = IO_BLOCK_SIZE / sizeof(u_int64_t);
-
 class DatablockOperation {
 public:
   DatablockOperation(int (*_skip)(DatablockOperation *, u_int64_t) = nullptr)
@@ -301,6 +299,9 @@ public:
 ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
                  size_t offset) {
   int err;
+
+  if (offset >= inode_data->metadata.size)
+    return 0;
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);

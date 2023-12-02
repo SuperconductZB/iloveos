@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main() {
+int main(int argc, char *argv[]) {
   //   printf("hello word!");
   //   fischl *F = new fischl;
   //   F->init();
@@ -170,106 +170,142 @@ int main() {
   // err = fs->lseek_next_hole(&inode_data, offs + 100000);
   // printf("lseek_next_hole (%d): %d\n\n", offs + 100000, err);
 
-  // RawDisk *disk = new FakeRawDisk(2048);
-  // Fs *fs = new Fs(disk);
-  // fs->format();
-
-  // INode_Data inode_data;
-  // fs->inode_manager->new_inode(1, 2, 3, &inode_data);
-
-  // char cwd_buf[PATH_MAX];
-  // int fd;
-
-  // assert(getcwd(cwd_buf, sizeof(cwd_buf)) != NULL);
-
-  // printf("\n\n(");
-
-  // printf(cwd_buf);
-
-  // printf(")\n\n");
-
-  // fd = open("/home/connor", O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
-  // assert(fd != -1);
-
-  // u_int64_t test_start_range = IO_BLOCK_SIZE * 100;
-  // u_int64_t test_write_range = IO_BLOCK_SIZE * 50;
-  // u_int64_t test_read_range = IO_BLOCK_SIZE * 50;
-
-  // char zeros[test_write_range] = {0};
-  // char ones[test_write_range];
-  // memset(ones, 1, test_write_range);
-
-  // char *write_buf = ones;
-  // char reference_read_buf[test_read_range];
-  // char test_read_buf[test_read_range];
-  // size_t offset, count;
-  // int test_res, ref_res;
-
-  // for (int i = 0; i < 1000; ++i) {
-  //   offset = rand() & test_start_range;
-
-  //   switch (rand() % 2) {
-  //   case 0:
-  //     count = rand() & test_write_range;
-  //     write_buf = (write_buf == ones) ? zeros : ones;
-  //     printf("write: %ds count=%d offset=%d\n", write_buf[0], count, offset);
-  //     test_res = fs->write(&inode_data, write_buf, count, offset);
-  //     assert(lseek(fd, offset, SEEK_SET) == offset);
-  //     ref_res = write(fd, write_buf, count);
-  //     break;
-  //   case 1:
-  //     count = rand() & test_read_range;
-  //     printf("read: count=%d offset=%d\n", count, offset);
-  //     test_res = fs->read(&inode_data, test_read_buf, count, offset);
-  //     assert(lseek(fd, offset, SEEK_SET) == offset);
-  //     ref_res = read(fd, reference_read_buf, count);
-  //     bool reads_are_equal = true;
-  //     for (size_t j = 0; j < count; ++j)
-  //       if (test_read_buf[i] != reference_read_buf[i]) {
-  //         reads_are_equal = false;
-  //         break;
-  //       }
-  //     assert(reads_are_equal);
-  //     break;
-  //   }
-
-  //   assert(test_res == ref_res);
-  // }
-
-  RawDisk *disk = new FakeRawDisk(5120);
+  RawDisk *disk = new FakeRawDisk(5000);
   Fs *fs = new Fs(disk);
   fs->format();
-
-  int buf_size = IO_BLOCK_SIZE * 200;
-  int loops = 14 * 1024 * 1024 / buf_size;
-
-  char buf[buf_size];
-
-  memset(buf, 1, sizeof(buf));
 
   INode_Data inode_data;
   fs->inode_manager->new_inode(1, 2, 3, &inode_data);
 
-  int res;
+  char cwd_buf[PATH_MAX];
+  int fd;
 
-  for (int j = 0; j < loops; ++j) {
-    res = fs->write(&inode_data, buf, sizeof(buf), sizeof(buf) * j);
-    printf("write: %d j=%d\n", res, j);
-  }
+  assert(getcwd(cwd_buf, sizeof(cwd_buf)) != NULL);
 
-  for (int j = 0; j < loops; ++j) {
+  fd = open("/tmp", O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
+  assert(fd != -1);
 
-    memset(buf, 0, sizeof(buf));
-    res = fs->read(&inode_data, buf, sizeof(buf), sizeof(buf) * j);
+  u_int64_t test_start_range = IO_BLOCK_SIZE * 3584;
+  u_int64_t test_io_range = IO_BLOCK_SIZE * 100;
 
-    printf("read: %d j=%d\n", res, j);
+  char ones[test_io_range];
+  memset(ones, 1, test_io_range);
+  char twos[test_io_range];
+  memset(twos, 2, test_io_range);
 
-    for (int i = 0; i < sizeof(buf); ++i)
-      if (buf[1] != 1) {
-        printf("error:  %d\n", i);
-        return -1;
+  char *write_buf = ones;
+  char reference_read_buf[test_io_range];
+  char test_read_buf[test_io_range];
+  size_t offset, count;
+  int test_res, ref_res;
+  bool reads_are_equal;
+  bool canwrite;
+
+  size_t weird_offset = 6508064;
+
+  for (int i = 0; i < 100000; ++i) {
+    offset = rand() % test_start_range;
+
+    reads_are_equal = true;
+
+    switch (rand() % 3) {
+    case 0:
+      count = rand() % test_io_range;
+      write_buf = (write_buf == ones) ? twos : ones;
+      if (offset <= weird_offset && (count + offset) > weird_offset)
+        printf("write: %ds count=%d offset=%d\n", write_buf[0], count, offset);
+      test_res = fs->write(&inode_data, write_buf, count, offset);
+      assert(lseek(fd, offset, SEEK_SET) == offset);
+      ref_res = write(fd, write_buf, count);
+      break;
+    case 1:
+      count = rand() % test_io_range;
+      if (offset <= weird_offset && (count + offset) > weird_offset)
+        printf("read: count=%d offset=%d\n", count, offset);
+      test_res = fs->read(&inode_data, test_read_buf, count, offset);
+      assert(lseek(fd, offset, SEEK_SET) == offset);
+      ref_res = read(fd, reference_read_buf, count);
+      for (size_t j = 0; j < count; ++j)
+        if (test_read_buf[i] != reference_read_buf[i]) {
+          reads_are_equal = false;
+          break;
+        }
+      break;
+    case 2:
+      if (offset <= weird_offset)
+        printf("truncate: length=%d\n", offset);
+      test_res = fs->truncate(&inode_data, offset);
+      ref_res = ftruncate(fd, offset);
+      break;
+    }
+
+    //   printf("test_res=%d, ref_res=%d\n", test_res, ref_res);
+    assert(test_res == ref_res);
+
+    if (!reads_are_equal && count > 0) {
+      int prev_test = test_read_buf[0], prev_ref = reference_read_buf[0],
+          same_count = 1;
+      for (size_t j = 1; j < count; ++j) {
+        u_int64_t byte_index = (j + offset);
+        if (byte_index % IO_BLOCK_SIZE == 0)
+          printf("Block: %d\n", byte_index / IO_BLOCK_SIZE);
+        if (prev_test != test_read_buf[j] ||
+            prev_ref != reference_read_buf[j]) {
+          printf("rt %d %d%s\n", prev_ref, prev_test,
+                 (prev_test != prev_ref)
+                     ? " -----DIFF----- -----DIFF----- -----DIFF-----"
+                     : "");
+          printf("^^^^ same for %d bytes ending at %d, starting at %d ^^^^\n",
+                 same_count, byte_index, byte_index - same_count);
+          prev_test = test_read_buf[j];
+          prev_ref = reference_read_buf[j];
+          same_count = 1;
+        } else {
+          same_count++;
+        }
       }
+      printf("rt %d %d%s\n", prev_test, prev_test,
+             (prev_test != prev_ref)
+                 ? " -----DIFF----- -----DIFF----- -----DIFF-----"
+                 : "");
+      printf("^^^^ same for %d bytes ^^^^\n", same_count);
+    }
+
+    assert(reads_are_equal);
   }
 
-  return 0;
+  // RawDisk *disk = new FakeRawDisk(5120);
+  // Fs *fs = new Fs(disk);
+  // fs->format();
+
+  // int buf_size = IO_BLOCK_SIZE * 200;
+  // int loops = 14 * 1024 * 1024 / buf_size;
+
+  // char buf[buf_size];
+
+  // memset(buf, 1, sizeof(buf));
+
+  // INode_Data inode_data;
+  // fs->inode_manager->new_inode(1, 2, 3, &inode_data);
+
+  // int res;
+
+  // for (int j = 0; j < loops; ++j) {
+  //   res = fs->write(&inode_data, buf, sizeof(buf), sizeof(buf) * j);
+  //   printf("write: %d j=%d\n", res, j);
+  // }
+
+  // for (int j = 0; j < loops; ++j) {
+
+  //   memset(buf, 0, sizeof(buf));
+  //   res = fs->read(&inode_data, buf, sizeof(buf), sizeof(buf) * j);
+
+  //   printf("read: %d j=%d\n", res, j);
+
+  //   for (int i = 0; i < sizeof(buf); ++i)
+  //     if (buf[1] != 1) {
+  //       printf("error:  %d\n", i);
+  //       return -1;
+  //     }
+  // }
 }

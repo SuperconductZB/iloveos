@@ -12,11 +12,13 @@
 #include <unistd.h>
 
 #define IO_BLOCK_SIZE 4096
+#define INDIRECT_BLOCKS 512
 
 #define NUM_INODE_BLOCKS 1023
 
 #define INODE_SIZE 512
 
-#define DATABLOCKS_PER_BITMAP_BLOCK 255
+// TODO: explore the optimal value for this
+#define DATABLOCKS_PER_BITMAP_BLOCK 2047
 
 #endif

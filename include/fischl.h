@@ -1,7 +1,3 @@
-class fischl{
 
-    // declare
-    public:
-         int init();
 
-};
+int fischl(int argc, char *argv[]);
