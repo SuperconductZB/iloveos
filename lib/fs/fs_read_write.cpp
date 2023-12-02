@@ -15,6 +15,8 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
                                DatablockOperation *op) {
   int result;
 
+  printf("%llu %llu %llu\n", NUMBER_OF_DIRECT_BLOCKS, INDIRECT_BLOCKS, INDIRECT_BLOCKS * INDIRECT_BLOCKS);
+
   u_int64_t start_index = start_block_index;
   for (size_t i = start_index; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {
     if ((result = sweep_datablocks(&(inode_data->direct_blocks[i]), 0, 0,
@@ -25,25 +27,25 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
 
   start_index -= NUMBER_OF_DIRECT_BLOCKS;
 
-  if (start_index < IO_BLOCK_SIZE) {
+  if (start_index < INDIRECT_BLOCKS) {
     if ((result = sweep_datablocks(&(inode_data->single_indirect_block), 1,
                                    start_index, allocate, op)) <= 0)
       return result;
-    start_index = IO_BLOCK_SIZE;
+    start_index = INDIRECT_BLOCKS;
   }
 
-  start_index -= IO_BLOCK_SIZE;
+  start_index -= INDIRECT_BLOCKS;
 
-  if (start_index < IO_BLOCK_SIZE * IO_BLOCK_SIZE) {
+  if (start_index < INDIRECT_BLOCKS * INDIRECT_BLOCKS) {
     if ((result = sweep_datablocks(&(inode_data->double_indirect_block), 2,
                                    start_index, allocate, op)) <= 0)
       return result;
-    start_index = IO_BLOCK_SIZE * IO_BLOCK_SIZE;
+    start_index = INDIRECT_BLOCKS * INDIRECT_BLOCKS;
   }
 
-  start_index -= IO_BLOCK_SIZE * IO_BLOCK_SIZE;
+  start_index -= INDIRECT_BLOCKS * INDIRECT_BLOCKS;
 
-  if (start_index < (u_int64_t)IO_BLOCK_SIZE * IO_BLOCK_SIZE * IO_BLOCK_SIZE) {
+  if (start_index < (u_int64_t)INDIRECT_BLOCKS * INDIRECT_BLOCKS * INDIRECT_BLOCKS) {
     if ((result = sweep_datablocks(&(inode_data->triple_indirect_block), 3,
                                    start_index, allocate, op)) <= 0)
       return result;
@@ -61,6 +63,8 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   int err;
   int result = -1;
 
+  //printf("SWEEP %llu %d %llu %d\n", *block_num, indirect_num, start_block_index, int(allocate));
+
   if (allocate && (*block_num) == 0)
     if ((err = datablock_manager->new_datablock(block_num)) < 0)
       return err;
@@ -74,10 +78,11 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
     if ((err = disk->read_block(*block_num, buf)) < 0)
       return err;
   }
+  
 
   u_int64_t indirect_block_size = 1;
   for (int i = 1; i < indirect_num; ++i)
-    indirect_block_size *= IO_BLOCK_SIZE;
+    indirect_block_size *= INDIRECT_BLOCKS;
 
   u_int64_t this_layer_start_index = start_block_index / indirect_block_size;
   u_int64_t next_layer_start_index =
@@ -86,6 +91,7 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   u_int64_t temp;
   u_int64_t next_block_num;
   bool modified = false;
+  //printf("SWEEP TO LOWER LEVEL %llu %llu %llu\n", this_layer_start_index, next_layer_start_index, indirect_block_size);
 
   for (size_t i = this_layer_start_index * sizeof(u_int64_t); i < IO_BLOCK_SIZE;
        i += sizeof(u_int64_t)) {

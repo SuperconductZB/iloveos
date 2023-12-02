@@ -333,7 +333,7 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
             ent.deserialize(buffer+i);
             if (ent.inode_number) {
                 filler(buf, ent.file_name, NULL, 0, FUSE_FILL_DIR_PLUS);
-                printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+                //printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
             }
         }
     }
