@@ -29,6 +29,7 @@ class FilesOperation {
     int fischl_releasedir(const char* path, struct fuse_file_info *fi);
     int fischl_unlink (const char *);
     int fischl_rmdir(const char *);
+    int fischl_link(const char* from, const char* to);
     int fischl_rename(const char *path, const char *, unsigned int flags);
     int fischl_truncate(const char *path, off_t, struct fuse_file_info *fi);
     int fischl_chmod(const char *path, mode_t, struct fuse_file_info *fi);

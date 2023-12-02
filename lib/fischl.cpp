@@ -46,7 +46,7 @@ void fischl_destroy(void* private_data) {
 }
 
 static int fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
-    return options.fsop->fischl_getattr(path, stbuf, fi);
+     return options.fsop->fischl_getattr(path, stbuf, fi);
 }
 
 static int fischl_access(const char* path, int mask) {
@@ -94,7 +94,7 @@ static int fischl_rename(const char *path, const char *new_name, unsigned int fl
 }
 
 static int fischl_link(const char* from, const char* to) {
-    return -1;
+    return options.fsop->fischl_link(from, to);
 }
 
 static int fischl_chmod(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -149,7 +149,7 @@ static const struct fuse_operations fischl_oper = {
     .rmdir       = fischl_rmdir,
     //.symlink     = fischl_symlink,
     .rename      = fischl_rename,
-    //.link        = fischl_link,
+    .link        = fischl_link,
     .chmod       = fischl_chmod,
     .chown       = fischl_chown,
     .truncate    = fischl_truncate,

@@ -15,7 +15,6 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
                                DatablockOperation *op) {
   int result;
 
-  printf("NOW AT %llu %llu %llu %llu %llu\n", NUMBER_OF_DIRECT_BLOCKS, INDIRECT_BLOCKS, INDIRECT_BLOCKS * INDIRECT_BLOCKS, inode_data->single_indirect_block, inode_data->double_indirect_block);
   
   u_int64_t start_index = start_block_index;
   for (size_t i = start_index; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {

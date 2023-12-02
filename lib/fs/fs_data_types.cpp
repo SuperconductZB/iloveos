@@ -54,7 +54,7 @@ INode_Data::INode_Data(u_int64_t inode_num) : inode_num(inode_num) {
   metadata.gid = -1;
   metadata.permissions = -1;
   metadata.size = 0;
-  metadata.reference_count = 0;
+  metadata.reference_count = 1;
 
   single_indirect_block = double_indirect_block = triple_indirect_block = 0;
 

@@ -297,20 +297,22 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
     inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
 
-	memset(stbuf, 0, sizeof(struct stat));
+	//memset(stbuf, 0, sizeof(struct stat));
 	if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
 		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = inode.metadata.reference_count;
+		stbuf->st_nlink = 2;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
+        stbuf->st_ino = inode.inode_num;
 	} else {
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
 		stbuf->st_size = inode.metadata.size;
+        stbuf->st_ino = inode.inode_num;
 	}
-    perror(std::to_string(inode.metadata.size).c_str());
+    perror(std::to_string(inode.inode_num).c_str());
 	return res;
 }
 
@@ -353,6 +355,11 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
     INode_Data inode;
     inode.inode_num = inode_number;
     fs->inode_manager->load_inode(&inode);
+    if (inode.metadata.reference_count > 1 && (inode.metadata.permissions & S_IFMT) != S_IFDIR){
+        inode.metadata.reference_count -= 1;
+        fs->inode_manager->save_inode(&inode);
+        return;
+    }
     if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
         char buffer[IO_BLOCK_SIZE] = {0};
         for(u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
@@ -581,7 +588,6 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     // Allocate memory for the new buffer
     char* buffer = (char*)malloc(size);
     memcpy(buffer, buf, size);
-    printf("SOME DATA %d %d\n", (int)buffer[0], (int)buffer[1]);
     size_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
@@ -664,6 +670,41 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
         fs->inode_manager->save_inode(&inode);
     }
 
+    return 0;
+}
+
+int FilesOperation::fischl_link(const char* from, const char* to){
+
+    FileNode *get_file;
+    if((get_file = fischl_find_entry(root_node, from)) == NULL)
+        return -ENOENT;
+    INode_Data ret;
+    ret.inode_num = get_file->inode_number;
+    fs->inode_manager->load_inode(&ret);
+    
+    //check path
+    char *pathdup = strdup(to);
+    char *lastSlash = strrchr(pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+    // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    if (parent_filenode == NULL) {
+        fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
+        free(pathdup);
+        return -1;
+    }
+
+    u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(insert_inode_to(parent_inode_number, newFilename, &ret)<0){
+            return -1;
+        }
+
+    ret.metadata.reference_count += 1;
+    fs->inode_manager->save_inode(&ret);
+    fischl_add_entry(parent_filenode->subdirectory, ret.inode_num, newFilename, &ret);
+    free(pathdup);
     return 0;
 }
 
