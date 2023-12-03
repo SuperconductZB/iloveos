@@ -33,7 +33,7 @@ typedef struct RenameInfo {
 TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Data *new_inode);
 /*the to be added file in add_entry should be parent-child relationship with treenode, otherwise will wrong */
 /*see Add_FindFiletest in dir_API.cpp*/
-int fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode, FileNode *file);
+FileNode* fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode);
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode);
 int fischl_rm_entry(TreeNode *parent, const char *fileName);
 /*if want to use dir mode use the subdirectory treeNode pointer */

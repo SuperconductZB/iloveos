@@ -46,6 +46,20 @@ void FilesOperation::initialize_rootinode() {
     fs->inode_manager->save_inode(root_inode);
 }
 
+void FilesOperation::initialize(bool load) {
+    if (load){
+        INode_Data *root_inode = new INode_Data();
+        root_inode->inode_num = 1;
+        fs->inode_manager->load_inode(root_inode);
+        root_node = fischl_init_entry(1, "/", root_inode);
+        assert(root_node->self_info!=NULL);
+        fs->load_superblock();
+    }
+    else{
+        initialize_rootinode();
+    }
+}
+
 void FilesOperation::printDirectory(u_int64_t inode_number) {
     INode_Data inode;
     inode.inode_num = inode_number;
@@ -97,6 +111,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
     bool allocated = false;
     INode_Data *new_inode = new INode_Data();
     fs->inode_manager->new_inode(getuid(), getgid(), mode, new_inode);
+    //printf("%llu\n",new_inode->inode_num);
     if ((mode & S_IFMT) == S_IFDIR) {
         create_dot_dotdot(new_inode, parent_inode_number);
         fs->inode_manager->save_inode(new_inode);
@@ -194,7 +209,7 @@ bool FilesOperation::permission_check(int mask, INode_Data *inode) {
     mode_t per = (mode_t)inode->metadata.permissions;
     uid_t uid = (uid_t)inode->metadata.uid;
     gid_t gid = (gid_t)inode->metadata.gid;
-    printf("PERMISSION CHECK %d %llu %llu %o\n", mask, uid, gid, per);
+    //printf("PERMISSION CHECK %d %llu %llu %o\n", mask, uid, gid, per);
     if(getuid() == uid){
         if ((mask & R_OK) && !(per & S_IRUSR)) {
             return false; // Permission denied for reading
@@ -367,7 +382,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
     inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
 
-    printf("GETATTR PERM %o\n", (mode_t)inode.metadata.permissions);
+    //printf("GETATTR PERM %o\n", (mode_t)inode.metadata.permissions);
 
 	//memset(stbuf, 0, sizeof(struct stat));
 	if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
@@ -424,7 +439,7 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
             ent.deserialize(buffer+i);
             if (ent.inode_number) {
                 filler(buf, ent.file_name, NULL, 0, FUSE_FILL_DIR_PLUS);
-                //printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
+                printf("%s\t%llu;\t\n", ent.file_name, ent.inode_number);
             }
         }
     }

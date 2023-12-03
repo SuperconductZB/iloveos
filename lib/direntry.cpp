@@ -156,7 +156,7 @@ TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Da
     return newDir;
 }
 
-int fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode, FileNode *file){
+FileNode* fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode){
     char *Name = strdup(fileName);
     TreeNode *newDir = NULL;
     /*If directory, malloc TreeNode, and then create filenode that belongs to Parent hash table content*/
@@ -173,9 +173,7 @@ int fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const cha
     //Diretory have its own file information, that is . here
     if(newDir != NULL)
         newDir->self_info = newFile;
-    file = newFile;
-    //free(Name); cannot free name
-    return 0;
+    return newFile;
 }
 
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode){
@@ -220,6 +218,8 @@ FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
     TreeNode *current = root;
     FileNode *file = NULL;
 
+    printf("FINDING %s %s %llu\n", path, segment, current->self_info->inode_number);
+
     while (segment != NULL && current != NULL) {
         if (strcmp(segment, "..") == 0) {
             // Move up to the parent directory
@@ -249,9 +249,8 @@ FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
                         ent.deserialize(buffer+i);
                         //printf("WARNING:%d %llu %llu %s %s\n",__LINE__,inode.inode_num, ent.inode_number, ent.file_name, segment);
                         if (ent.inode_number && strcmp(ent.file_name, segment)==0) {
-                            if(fischl_add_entry_for_cache(current, ent.inode_number, ent.file_name, &inode, file)<0){
-                                return NULL;
-                            }
+                            file = fischl_add_entry_for_cache(current, ent.inode_number, ent.file_name, &inode);
+                            //printf("DONE !! %llu\n", file->inode_number);
                             break;
                         }
                     }
@@ -259,6 +258,7 @@ FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
             }
             if (file != NULL && file->subdirectory == NULL) {
                 free(pathCopy);
+                //printf("FOUND !! %llu\n", file->inode_number);
                 return file; //File found
                 //return current; return filenode
             }

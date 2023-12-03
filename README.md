@@ -22,18 +22,23 @@ make # cmake --build . is same
 ## mount and test
 normal usage:
 ```bash
-./fischl diskpath mountpoint
+./fischl diskpath n mountpoint
 ```
-diskpath must be the provided following ./fischl
+diskpath must be provided following ./fischl
+l/n must be provided following diskpath indicating whether to load the exisiting file system or create a new one.
+for loading:
+```bash
+./fischl diskpath l mountpoint
+```
 
 if the diskpath need to be accessed by root:
 ```bash
-sudo ./fischl diskpath -o allow_other mountpoint
+sudo ./fischl diskpath n -o allow_other mountpoint
 ```
 
 for debugging:
 ```bash
-sudo ./fischl diskpath -o allow_other -d mountpoint
+sudo ./fischl diskpath n -o allow_other -d mountpoint
 ```
 
 ## run test

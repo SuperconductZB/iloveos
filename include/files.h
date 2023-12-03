@@ -8,12 +8,13 @@ class FilesOperation {
     Fs *fs;
     void create_dot_dotdot(INode_Data*, u_int64_t);
 
-    public:
+public:   
     TreeNode *root_node;
     FilesOperation(RawDisk&, Fs*);
     //int read_datablock(const INode_Data& inode, u_int64_t index, char* buffer);
     //int write_datablock(INode_Data& inode, u_int64_t index, char* buffer);
     void initialize_rootinode();
+    void initialize(bool load);
     void printbuffer(const char*,int);
     void printDirectory(u_int64_t);
     bool permission_check(int, INode_Data*);

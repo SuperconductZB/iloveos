@@ -22,6 +22,7 @@ static struct options {
     Fs *fs;
     FilesOperation *fsop;
 	int show_help;
+    bool load;
 } options;
 
 #define OPTION(t, p)                           \
@@ -34,7 +35,7 @@ static const struct fuse_opt option_spec[] = {
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
     cfg->use_ino = 1;
-    options.fsop->initialize_rootinode();
+    options.fsop->initialize(options.load);
 }
 
 int fischl_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
@@ -191,12 +192,14 @@ static void show_help(const char *progname)
 int fischl(int argc, char *argv[])
 {
 	int ret;
-    if(argc < 2){
-        printf("WRONG ARGUMENTS");
+    if(argc < 3){
+        printf("WRONG ARGUMENTS\n");
         return 0;
     }
     std::swap(argv[0], argv[1]);
-	struct fuse_args args = FUSE_ARGS_INIT(argc-1, argv+1);
+    std::swap(argv[1], argv[2]);
+
+	struct fuse_args args = FUSE_ARGS_INIT(argc-2, argv+2);
     srand(time(NULL)); // Seed the random number generator
     //const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
@@ -207,8 +210,18 @@ int fischl(int argc, char *argv[])
     else{
         options.H = new RealRawDisk(argv[0]);
     }
+    if(strcmp(argv[1], "l")==0){
+        options.load = true;
+    }
+    else if(strcmp(argv[1], "n")==0){
+        options.load = false;
+    }
+    else{
+        printf("WRONG l/n ARGUMENTS\n");
+        return 0;
+    }
     options.fs = new Fs(options.H);
-    options.fs->format();
+    if(!options.load)options.fs->format();
     options.fsop = new FilesOperation(*options.H, options.fs);
 
 
