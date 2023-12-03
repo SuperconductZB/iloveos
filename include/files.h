@@ -17,12 +17,13 @@ class FilesOperation {
     void printbuffer(const char*,int);
     void printDirectory(u_int64_t);
     INode_Data* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
-    int insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode);
+    int insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode, bool check_replace);
     void unlink_inode(u_int64_t inode_number);
     u_int64_t disk_namei(const char* path);
     u_int64_t namei(const char* path);
     int fischl_mkdir(const char*, mode_t);
     int fischl_mknod(const char*, mode_t, dev_t);//for special file
+    int fischl_access(const char* path, int mask);
     int fischl_create(const char *, mode_t, struct fuse_file_info *);//for regular file
     int fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi);
     int fischl_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);

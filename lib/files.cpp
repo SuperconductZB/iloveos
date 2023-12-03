@@ -190,6 +190,40 @@ u_int64_t FilesOperation::namei(const char* path) {
     else return -1;
 }
 
+int FilesOperation::fischl_access(const char* path, int mask) {
+
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+     inode.metadata.permissions = -1;
+    printf("ACCESS %d %d\n", mask, inode.metadata.permissions);
+    mode_t per = inode.metadata.permissions;
+    
+    fs->inode_manager->load_inode(&inode);
+    if ((mask & R_OK) && !(per & S_IRUSR)) {
+        printf("DENIED R %d %d\n", (mask & R_OK), (per& S_IRUSR));
+        return -EACCES; // Permission denied for reading
+    }
+
+    if ((mask & W_OK) && !(per & S_IWUSR)) {
+        printf("DENIED W %d %d\n", (mask & W_OK), (per & S_IWUSR));
+        return -EACCES; // Permission denied for writing
+    }
+
+    if ((mask & X_OK) && !(per & S_IXUSR)) {
+        printf("DENIED X %d %d %d %d\n", (mask & X_OK), (per & S_IXUSR), per, S_IXUSR);
+        return -EACCES; // Permission denied for executing
+    }/**/
+    // return 0 when access is allowed
+    return 0;
+} 
+
 int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
     //check path
     char *pathdup = strdup(path);
@@ -290,9 +324,9 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
         stbuf->st_gid = inode.metadata.gid;
         stbuf->st_atime = (time_t)(inode.metadata.access_time / 1000000000ULL);
         stbuf->st_mtime = (time_t)(inode.metadata.modification_time / 1000000000ULL);
+        stbuf->st_size = IO_BLOCK_SIZE;
         stbuf->st_ino = inode.inode_num;
 	} else if(S_ISLNK(inode.metadata.permissions)){
-        printf("THIS IS GOOD %d %llu\n", inode.metadata.size, inode.inode_num);
         stbuf->st_mode = S_IFLNK;
 		stbuf->st_nlink = 1;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
@@ -672,7 +706,7 @@ int FilesOperation::fischl_symlink(const char* to, const char* from){
     return 0;//SUCESS
 }
 
-int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode) {
+int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode, bool check_replace) {
     // trys to create a file under parent directory
     if (strlen(name)>=256) {
         perror("Name too long, cannot create file or directory");
@@ -694,12 +728,20 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
         for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
             ent.deserialize(r_buffer+i);
             if (strcmp(ent.file_name, name)==0 && ent.inode_number != 0) {
-                if((new_inode->metadata.permissions & S_IFMT) == S_IFDIR){
-                    fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
-                }else{
-                    fprintf(stderr,"[%s ,%d] %s already exists\n",__func__,__LINE__, name);
-                }                  
-                return -1;
+                if(check_replace){
+                    if((new_inode->metadata.permissions & S_IFMT) == S_IFDIR){
+                        fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
+                    }else{
+                        fprintf(stderr,"[%s ,%d] %s already exists\n",__func__,__LINE__, name);
+                    }                  
+                    return -1;
+                }
+                else{
+                    ent.inode_number = new_inode->inode_num;
+                    ent.serialize(r_buffer+i);
+                    fs->write(&inode, r_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+                    return 0;
+                }
             }
         }
     }
@@ -763,7 +805,7 @@ int FilesOperation::fischl_link(const char* from, const char* to){
     }
 
     u_int64_t parent_inode_number = parent_filenode->inode_number;
-    if(insert_inode_to(parent_inode_number, newFilename, &ret)<0){
+    if(insert_inode_to(parent_inode_number, newFilename, &ret, true)<0){
             return -1;
         }
 
@@ -901,7 +943,7 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     INode_Data ret;
     ret.inode_num = rename_info.oldFileNode->inode_number;
     fs->inode_manager->load_inode(&ret);
-    if(insert_inode_to(rename_info.newParentNode->inode_number, rename_info.newName, &ret)<0){
+    if(insert_inode_to(rename_info.newParentNode->inode_number, rename_info.newName, &ret, false)<0){
         return -1;
     }
     bool change_flag = false;

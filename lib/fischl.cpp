@@ -51,9 +51,7 @@ static int fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file
 }
 
 static int fischl_access(const char* path, int mask) {
-
-    // return 0 when access is allowed
-    return 0;
+    return options.fsop->fischl_access(path, mask);
 } 
 
 static int fischl_readlink(const char* path, char* buf, size_t size) {
