@@ -776,85 +776,161 @@ int FilesOperation::fischl_link(const char* from, const char* to){
 
 
 // TODO: rename dir and rename fail
-int FilesOperation::fischl_rename(const char *path, const char *new_name, unsigned int flags){
-    char *pathdup = strdup(path);
+int FilesOperation::fischl_rename(const char *old_path, const char *new_path, unsigned int flags){
+    //find old path
+    char *pathdup = strdup(old_path);
     char *lastSlash = strrchr(pathdup, '/');
     *lastSlash = '\0';
     char *filename = lastSlash+1;
-    char *ParentPath = pathdup;
+    char *oldParentPath = pathdup;
     if (!strcmp(filename,".")||!strcmp(filename,"..")) {
-        printf("refusing to remove . or ..\n");
+        printf("refuse to remove . or ..\n");
         return -1;
     }
-    FileNode *parent_filenode = fischl_load_entry(root_node, ParentPath);
-    if (parent_filenode == NULL) {
-        printf("parent %s not found by fischl_load_entry\n", ParentPath);
+    //put old path info in rename struct
+    RenameInfo rename_info;
+    rename_info.exchangeExist = false;
+    rename_info.oldParentNode = fischl_load_entry(root_node, oldParentPath);
+    //if path end with / means to rename directory
+    rename_info.oldFileNode   = strlen(filename)? fischl_load_entry(rename_info.oldParentNode->subdirectory, filename):rename_info.oldParentNode;
+
+    if (rename_info.oldFileNode == NULL) {
+        fprintf(stderr,"[%s ,%d] path %s not found by fischl_load_entry\n",__func__,__LINE__, old_path);
         free(pathdup);
         return -1;
     }
-    u_int64_t parent_inode_number = parent_filenode->inode_number;
-    u_int64_t target_inode = 0;
+    
+    //find new path
+    char *new_pathdup = strdup(new_path);
+    lastSlash = strrchr(new_pathdup, '/');
+    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
+    char *newParentPath = new_pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+    //put new path info in rename struct
+    rename_info.newName       = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
+    rename_info.newFileNode   = fischl_load_entry(root_node, new_path);
+    rename_info.newParentNode = strlen(newParentPath)? fischl_load_entry(root_node, newParentPath): root_node->self_info;
 
+    //configure with flag
+    if (flags & RENAME_NOREPLACE) {
+        // Check if newpath exists and return error if it does
+        if(rename_info.newFileNode != NULL){
+            fprintf(stderr,"[%s ,%d] newpath has already existed\n",__func__,__LINE__);
+            free(new_pathdup);//new path
+            free(pathdup);//old path
+            return -1;
+        }
+    }
+
+    if (flags & RENAME_EXCHANGE) {
+        // Ensure both oldpath and newpath exist and exchange them atomically
+        if(rename_info.newFileNode == NULL){
+            fprintf(stderr,"[%s ,%d] newpath does not exist cannot exchange\n",__func__,__LINE__);
+            free(new_pathdup);
+            free(pathdup);
+            return -1;
+        }
+        rename_info.exchangeExist = true;
+        INode_Data parent_INode;
+        parent_INode.inode_num = rename_info.newParentNode->inode_number;
+        fs->inode_manager->load_inode(&parent_INode);
+        char rw_buffer[IO_BLOCK_SIZE] = {0};
+        
+        bool change_flag = false;
+        //delete record on old path
+        for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
+            fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            DirectoryEntry ent;
+            for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+                ent.deserialize(rw_buffer+i);
+                if (ent.inode_number == rename_info.newFileNode->inode_number) {
+                    change_flag = true;//should be change
+                    strncpy(ent.file_name, filename, sizeof(ent.file_name) - 1);
+                    ent.file_name[sizeof(ent.file_name) - 1] = '\0'; 
+                    ent.serialize(rw_buffer+i);
+                    break;
+                }
+            }
+            if (change_flag) {
+                fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+                change_flag = false;
+                break;
+            }
+        }
+        parent_INode.inode_num = rename_info.oldParentNode->inode_number;
+        fs->inode_manager->load_inode(&parent_INode);
+        
+        change_flag = false;
+        //delete record on old path
+        for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
+            fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            DirectoryEntry ent;
+            for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+                ent.deserialize(rw_buffer+i);
+                if (ent.inode_number == rename_info.oldFileNode->inode_number) {
+                    change_flag = true;//should be change
+                    strncpy(ent.file_name, rename_info.newName, sizeof(ent.file_name) - 1);
+                    ent.file_name[sizeof(ent.file_name) - 1] = '\0'; 
+                    ent.serialize(rw_buffer+i);
+                    break;
+                }
+            }
+            if (change_flag) {
+                fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+                change_flag = false;
+                break;
+            }
+        }
+        fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
+        fischl_rm_entry(rename_info.newParentNode->subdirectory, rename_info.newName);
+        return 0;
+    }
+
+    // Normal rename logic if no flags are specified; can overwirte
+    // Hard Disk rename
+    if(rename_info.oldFileNode->subdirectory != NULL){//secure its directory
+        //remove its record from subdirectory; find .. from subdirectory
+
+    }
     // remove its record from parent
     INode_Data parent_INode;
-    parent_INode.inode_num = parent_inode_number;
+    parent_INode.inode_num = rename_info.oldParentNode->inode_number;
     fs->inode_manager->load_inode(&parent_INode);
     char rw_buffer[IO_BLOCK_SIZE] = {0};
+    
+    // relocate the old path file to new path
+    INode_Data ret;
+    ret.inode_num = rename_info.oldFileNode->inode_number;
+    fs->inode_manager->load_inode(&ret);
+    if(insert_inode_to(rename_info.newParentNode->inode_number, rename_info.newName, &ret)<0){
+        return -1;
+    }
+    bool change_flag = false;
+    //delete record on old path
     for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
         fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
         DirectoryEntry ent;
         for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
             ent.deserialize(rw_buffer+i);
             if (strcmp(ent.file_name, filename)==0) {
-                target_inode = ent.inode_number;
+                change_flag = true;//should be change
                 ent.inode_number = 0;
                 memset(ent.file_name, 0, sizeof(ent.file_name));
                 ent.serialize(rw_buffer+i);
                 break;
             }
         }
-        if (target_inode) {
+        if (change_flag) {
             fs->write(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+            change_flag = false;
             break;
         }
     }
-
-    // remove inode itself
-    if (target_inode) {
-        INode_Data ret;
-        ret.inode_num = target_inode;
-        fs->inode_manager->load_inode(&ret);
-        fischl_rm_entry(parent_filenode->subdirectory, filename);
-
-        printf("FOUND INODE AT %llu %s\n", target_inode, new_name);
-        char *pathdup2 = strdup(new_name);
-        char *lastSlash2 = strrchr(pathdup2, '/');
-        *lastSlash2 = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
-        char *newDirname2 = lastSlash2+1; //\0<direcotry name>, get from <direcotry name>
-        char *ParentPath2 = pathdup2;//pathdup are separated by pathdup, so it take <parent path> only
-
-        FileNode *parent_filenode2 = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath2): root_node->self_info;
-        if (parent_filenode2 == NULL) {
-            fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath2);
-            free(pathdup2);
-            return -ENOENT;//parentpath directory does not exist
-        }
-        u_int64_t parent_inode_number = parent_filenode->inode_number;
-        //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
-        //make new inode
-        if(insert_inode_to(parent_inode_number, newDirname2, &ret)<0){
-            return -1;
-        }
-        fischl_add_entry(parent_filenode->subdirectory, ret.inode_num, newDirname2, &ret);
-        free(pathdup);
-        // remove node itself and from parent hash
-        free(pathdup2);
-        return 0;
-    } else {
-        printf("cannot find %s in %s", filename, ParentPath);
-        free(pathdup);
-        return -1;
-    }
+    fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
+    
+    //free path
+    free(pathdup);
+    free(new_pathdup);
+    return 0;
 }
 
 int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_file_info *fi){
