@@ -61,9 +61,7 @@ static int fischl_readlink(const char* path, char* buf, size_t size) {
 }
 
 static int fischl_opendir(const char* path, struct fuse_file_info* fi) {
-    u_int64_t fh = options.fsop->namei(path);
-    fi->fh = fh;
-    return 0;
+    return options.fsop->fischl_opendir(path, fi);
 }
 
 static int fischl_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags flg) {
@@ -149,7 +147,7 @@ static const struct fuse_operations fischl_oper = {
     .unlink      = fischl_unlink,
     .rmdir       = fischl_rmdir,
     .symlink     = fischl_symlink,
-    .rename      = fischl_rename,
+    //.rename      = fischl_rename,
     .link        = fischl_link,
     .chmod       = fischl_chmod,
     .chown       = fischl_chown,
@@ -201,6 +199,7 @@ int fischl(int argc, char *argv[])
 
     //setupTestDirectory(&options.root);
     options.H = new FakeRawDisk(23552);
+    //options.H = new RealRawDisk("/dev/vdb");
     options.fs = new Fs(options.H);
     options.fs->format();
     options.fsop = new FilesOperation(*options.H, options.fs);

@@ -28,6 +28,7 @@ class FilesOperation {
     int fischl_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);
     int fischl_releasedir(const char* path, struct fuse_file_info *fi);
     int fischl_unlink (const char *);
+    int fischl_opendir(const char* path, struct fuse_file_info* fi);
     int fischl_rmdir(const char *);
     int fischl_readlink(const char* path, char* buf, size_t size);
     int fischl_symlink(const char* from, const char* to);

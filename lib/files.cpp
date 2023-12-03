@@ -6,25 +6,6 @@
 #include <sstream>
 #include <cassert>
 
-struct DirectoryEntry {
-    u_int64_t inode_number;
-    char file_name[256];
-    void serialize(char* buffer) {
-        u_int64_t t = inode_number;
-        for (int j = 0; j < 8; j++){
-            buffer[j] = t & (((u_int64_t)1<<(8))-1);
-            t >>= 8;
-        }
-        strcpy(buffer+8, file_name);
-    }
-    void deserialize(char* buffer) {
-        inode_number = 0;
-        for (int j = 0; j < 8; j++)
-            inode_number = inode_number | (((u_int64_t)(unsigned char)buffer[j])<<(8*j));
-        strcpy(file_name, buffer+8);
-    }
-};
-
 void FilesOperation::printbuffer(const char* buff, int len) {
     for(int i=0;i<len;i++){
         printf("%x ",buff[i]);
@@ -399,6 +380,15 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
         inode.metadata.size-=IO_BLOCK_SIZE;
     }
     fs->inode_manager->free_inode(&inode);
+}
+
+int FilesOperation::fischl_opendir(const char* path, struct fuse_file_info* fi) {
+    u_int64_t fh = namei(path);
+    if (fh < 0){
+        return -1;
+    }
+    fi->fh = fh;
+    return 0;
 }
 
 int FilesOperation::fischl_rmdir(const char* path) {

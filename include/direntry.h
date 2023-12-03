@@ -32,6 +32,7 @@ typedef struct RenameInfo {
 TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Data *new_inode);
 /*the to be added file in add_entry should be parent-child relationship with treenode, otherwise will wrong */
 /*see Add_FindFiletest in dir_API.cpp*/
+int fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode, FileNode *file);
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode);
 int fischl_rm_entry(TreeNode *parent, const char *fileName);
 /*if want to use dir mode use the subdirectory treeNode pointer */
@@ -43,3 +44,22 @@ void freeTree(TreeNode *node);
 /*for debug use*/
 TreeNode *createDirectory(const char *dirName, TreeNode *parent, int hashSize);
 TreeNode *find_parentPath(TreeNode *root, const char *path);
+
+struct DirectoryEntry {
+    u_int64_t inode_number;
+    char file_name[256];
+    void serialize(char* buffer) {
+        u_int64_t t = inode_number;
+        for (int j = 0; j < 8; j++){
+            buffer[j] = t & (((u_int64_t)1<<(8))-1);
+            t >>= 8;
+        }
+        strcpy(buffer+8, file_name);
+    }
+    void deserialize(char* buffer) {
+        inode_number = 0;
+        for (int j = 0; j < 8; j++)
+            inode_number = inode_number | (((u_int64_t)(unsigned char)buffer[j])<<(8*j));
+        strcpy(file_name, buffer+8);
+    }
+};
