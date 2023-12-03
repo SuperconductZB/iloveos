@@ -38,7 +38,7 @@ void FilesOperation::create_dot_dotdot(INode_Data* inode, u_int64_t parent_inode
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     INode_Data *root_inode = new INode_Data();
-    fs->inode_manager->new_inode(0, 0, S_IFDIR|0755, root_inode);
+    fs->inode_manager->new_inode(getuid(), getgid(), S_IFDIR|0755, root_inode);
     u_int64_t root_inode_number = root_inode->inode_num;
     create_dot_dotdot(root_inode, root_inode_number);
     root_node = fischl_init_entry(root_inode_number, "/", root_inode);
@@ -96,7 +96,7 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
 
     bool allocated = false;
     INode_Data *new_inode = new INode_Data();
-    fs->inode_manager->new_inode(0, 0, mode, new_inode);
+    fs->inode_manager->new_inode(getuid(), getgid(), mode, new_inode);
     if ((mode & S_IFMT) == S_IFDIR) {
         create_dot_dotdot(new_inode, parent_inode_number);
         fs->inode_manager->save_inode(new_inode);
@@ -280,6 +280,9 @@ int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
         return -ENOENT;//parentpath directory does not exist
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(!permission_check_by_inode_num(W_OK, parent_inode_number)){
+        return -EACCES;
+    }
 
     //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
     //make new inode
@@ -307,6 +310,9 @@ int FilesOperation::fischl_mknod(const char* path, mode_t mode, dev_t dev) {
         return -1;
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(!permission_check_by_inode_num(W_OK, parent_inode_number)){
+        return -EACCES;
+    }
     //make new inode
     INode_Data* ret = create_new_inode(parent_inode_number, newFilename, mode);
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
@@ -333,6 +339,9 @@ int FilesOperation::fischl_create(const char* path, mode_t mode, struct fuse_fil
         return -1;
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(!permission_check_by_inode_num(W_OK, parent_inode_number)){
+        return -EACCES;
+    }
     //make new inode
     INode_Data* ret = create_new_inode(parent_inode_number, newFilename, mode);
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
@@ -404,6 +413,9 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
     INode_Data inode;
     inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
+    if(!permission_check(R_OK, &inode)){
+        return -EACCES;
+    }
     char buffer[IO_BLOCK_SIZE] = {0};
     for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
         fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
@@ -506,6 +518,9 @@ int FilesOperation::fischl_rmdir(const char* path) {
     INode_Data parent_INode;
     parent_INode.inode_num = parent_inode_number;
     fs->inode_manager->load_inode(&parent_INode);
+    if(!permission_check(W_OK, &parent_INode)){
+        return -EACCES;
+    }
     char rw_buffer[IO_BLOCK_SIZE] = {0};
     for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
         fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
@@ -600,6 +615,9 @@ int FilesOperation::fischl_unlink(const char* path) {
     INode_Data parent_INode;
     parent_INode.inode_num = parent_inode_number;
     fs->inode_manager->load_inode(&parent_INode);
+    if(!permission_check(W_OK, &parent_INode)){
+        return -EACCES;
+    }
     char rw_buffer[IO_BLOCK_SIZE] = {0};
     for (u_int64_t idx=0; idx<parent_INode.metadata.size/IO_BLOCK_SIZE; idx++) {
         fs->read(&parent_INode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
@@ -608,6 +626,9 @@ int FilesOperation::fischl_unlink(const char* path) {
             ent.deserialize(rw_buffer+i);
             if (strcmp(ent.file_name, filename)==0) {
                 target_inode = ent.inode_number;
+                if(!permission_check_by_inode_num(W_OK, target_inode)){
+                    return -EACCES;
+                }
                 ent.inode_number = 0;
                 memset(ent.file_name, 0, sizeof(ent.file_name));
                 ent.serialize(rw_buffer+i);
@@ -732,6 +753,9 @@ int FilesOperation::fischl_readlink(const char* path, char* buf, size_t size){
     INode_Data symlink_inode;
     symlink_inode.inode_num = get_file->inode_number;
     fs->inode_manager->load_inode(&symlink_inode);
+    if(!permission_check(R_OK, &symlink_inode)){
+        return -EACCES;
+    }
     //char buffer[symlink_inode.metadata.size];
     //memset(buffer, 0, sizeof(buffer));
     fs->read(&symlink_inode, buf, symlink_inode.metadata.size, 0);
@@ -762,9 +786,12 @@ int FilesOperation::fischl_symlink(const char* to, const char* from){
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
-        return -1;
+        return -ENOENT;
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(!permission_check_by_inode_num(W_OK, parent_inode_number)){
+        return -EACCES;
+    }
     //make new inode
     INode_Data* ret = create_new_inode(parent_inode_number, newFilename, S_IFLNK|0777);
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
@@ -881,6 +908,9 @@ int FilesOperation::fischl_link(const char* from, const char* to){
     }
 
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+    if(!permission_check_by_inode_num(W_OK, parent_inode_number)){
+        return -EACCES;
+    }
     if(insert_inode_to(parent_inode_number, newFilename, &ret, true)<0){
             return -1;
         }
@@ -915,7 +945,7 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     if (rename_info.oldFileNode == NULL) {
         fprintf(stderr,"[%s ,%d] path %s not found by fischl_load_entry\n",__func__,__LINE__, old_path);
         free(pathdup);
-        return -1;
+        return -ENOENT;
     }
     
     //find new path
@@ -927,6 +957,19 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     rename_info.newName       = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     rename_info.newFileNode   = fischl_load_entry(root_node, new_path);
     rename_info.newParentNode = strlen(newParentPath)? fischl_load_entry(root_node, newParentPath): root_node->self_info;
+    
+    if(!permission_check_by_inode_num(W_OK, rename_info.oldParentNode->inode_number)){
+        return -EACCES;
+    }
+    if(!permission_check_by_inode_num(W_OK, rename_info.newParentNode->inode_number)){
+        return -EACCES;
+    }
+    if(!permission_check_by_inode_num(W_OK, rename_info.oldFileNode->inode_number)){
+        return -EACCES;
+    }
+    if(rename_info.newFileNode != NULL && !permission_check_by_inode_num(W_OK, rename_info.newFileNode->inode_number)){
+        return -EACCES;
+    }
 
     //configure with flag
     if (flags & RENAME_NOREPLACE) {
@@ -1063,6 +1106,9 @@ int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_
     INode_Data inode;
     inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
+    if(!permission_check(W_OK, &inode)){
+        return -EACCES;
+    }
     while(inode.metadata.size > offset + IO_BLOCK_SIZE) {
         printf("dealloc, %d\n", inode.metadata.size);
         u_int64_t dummy;
