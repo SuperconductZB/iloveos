@@ -191,13 +191,22 @@ static void show_help(const char *progname)
 int fischl(int argc, char *argv[])
 {
 	int ret;
-	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+    if(argc < 2){
+        printf("WRONG ARGUMENTS");
+        return 0;
+    }
+    std::swap(argv[0], argv[1]);
+	struct fuse_args args = FUSE_ARGS_INIT(argc-1, argv+1);
     srand(time(NULL)); // Seed the random number generator
     //const char* d = (argc < 2) ? "/dev/vdc" : argv[1];
 
     //setupTestDirectory(&options.root);
-    options.H = new FakeRawDisk(23552);
-    //options.H = new RealRawDisk("/dev/vdb");
+    if(strcmp(argv[0], "fake")==0){
+        options.H = new FakeRawDisk(27648);
+    }
+    else{
+        options.H = new RealRawDisk(argv[0]);
+    }
     options.fs = new Fs(options.H);
     options.fs->format();
     options.fsop = new FilesOperation(*options.H, options.fs);

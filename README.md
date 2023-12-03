@@ -19,6 +19,23 @@ cmake ..
 make # cmake --build . is same
 ```
 
+## mount and test
+normal usage:
+```bash
+./fischl diskpath mountpoint
+```
+diskpath must be the provided following ./fischl
+
+if the diskpath need to be accessed by root:
+```bash
+sudo ./fischl diskpath -o allow_other mountpoint
+```
+
+for debugging:
+```bash
+sudo ./fischl diskpath -o allow_other -d mountpoint
+```
+
 ## run test
 ### add your own test file on test/CMakeList.txt
 ```
