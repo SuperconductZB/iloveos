@@ -38,7 +38,7 @@ void FilesOperation::create_dot_dotdot(INode_Data* inode, u_int64_t parent_inode
 void FilesOperation::initialize_rootinode() {
     // this method must be called explicitly right after initializion
     INode_Data *root_inode = new INode_Data();
-    fs->inode_manager->new_inode(0, 0, S_IFDIR, root_inode);
+    fs->inode_manager->new_inode(0, 0, S_IFDIR|0755, root_inode);
     u_int64_t root_inode_number = root_inode->inode_num;
     create_dot_dotdot(root_inode, root_inode_number);
     root_node = fischl_init_entry(root_inode_number, "/", root_inode);
@@ -190,36 +190,77 @@ u_int64_t FilesOperation::namei(const char* path) {
     else return -1;
 }
 
+bool FilesOperation::permission_check(int mask, INode_Data *inode) {
+    mode_t per = (mode_t)inode->metadata.permissions;
+    uid_t uid = (uid_t)inode->metadata.uid;
+    gid_t gid = (gid_t)inode->metadata.gid;
+    printf("PERMISSION CHECK %d %llu %llu %o\n", mask, uid, gid, per);
+    if(getuid() == uid){
+        if ((mask & R_OK) && !(per & S_IRUSR)) {
+            return false; // Permission denied for reading
+        }
+
+        if ((mask & W_OK) && !(per & S_IWUSR)) {
+            return false; // Permission denied for writing
+        }
+
+        if ((mask & X_OK) && !(per & S_IXUSR)) {
+            return false; // Permission denied for executing
+        }
+        return true;
+    }
+    else if(getgid() == gid){
+        if ((mask & R_OK) && !(per & S_IRGRP)) {
+            return false; // Permission denied for reading
+        }
+
+        if ((mask & W_OK) && !(per & S_IWGRP)) {
+            return false; // Permission denied for writing
+        }
+
+        if ((mask & X_OK) && !(per & S_IXGRP)) {
+            return false; // Permission denied for executing
+        }
+        return true;
+    }
+    else{
+        if ((mask & R_OK) && !(per & S_IROTH)) {
+            return false; // Permission denied for reading
+        }
+
+        if ((mask & W_OK) && !(per & S_IWOTH)) {
+            return false; // Permission denied for writing
+        }
+
+        if ((mask & X_OK) && !(per & S_IXOTH)) {
+            return false; // Permission denied for executing
+        }
+        return true;
+    }
+}
+
+bool FilesOperation::permission_check_by_inode_num(int mask, u_int64_t inode_num) {
+    INode_Data inode;
+    inode.inode_num = inode_num;
+    
+    fs->inode_manager->load_inode(&inode);
+    if(!permission_check(mask, &inode)){
+        return false;
+    }
+    return true;
+}
+
 int FilesOperation::fischl_access(const char* path, int mask) {
 
-	int res = 0;
     u_int64_t fh = namei(path);
 
     if (fh == -1){
         return -ENOENT;
     }
 
-    INode_Data inode;
-    inode.inode_num = fh;
-     inode.metadata.permissions = -1;
-    printf("ACCESS %d %d\n", mask, inode.metadata.permissions);
-    mode_t per = inode.metadata.permissions;
-    
-    fs->inode_manager->load_inode(&inode);
-    if ((mask & R_OK) && !(per & S_IRUSR)) {
-        printf("DENIED R %d %d\n", (mask & R_OK), (per& S_IRUSR));
-        return -EACCES; // Permission denied for reading
+    if(!permission_check_by_inode_num(mask, fh)){
+        return -EACCES;
     }
-
-    if ((mask & W_OK) && !(per & S_IWUSR)) {
-        printf("DENIED W %d %d\n", (mask & W_OK), (per & S_IWUSR));
-        return -EACCES; // Permission denied for writing
-    }
-
-    if ((mask & X_OK) && !(per & S_IXUSR)) {
-        printf("DENIED X %d %d %d %d\n", (mask & X_OK), (per & S_IXUSR), per, S_IXUSR);
-        return -EACCES; // Permission denied for executing
-    }/**/
     // return 0 when access is allowed
     return 0;
 } 
@@ -239,6 +280,7 @@ int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
         return -ENOENT;//parentpath directory does not exist
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
+
     //printf("%s, %llu, %s\n", parent_filenode->name, parent_inode_number, newDirname);
     //make new inode
     INode_Data* ret = create_new_inode(parent_inode_number, newDirname, mode|S_IFDIR);//specify S_IFDIR as directory
@@ -316,9 +358,11 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
     inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
 
+    printf("GETATTR PERM %o\n", (mode_t)inode.metadata.permissions);
+
 	//memset(stbuf, 0, sizeof(struct stat));
 	if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
-		stbuf->st_mode = S_IFDIR | 0755;
+		stbuf->st_mode = (mode_t)inode.metadata.permissions;//S_IFDIR | 0755;
 		stbuf->st_nlink = 2;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
@@ -327,7 +371,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
         stbuf->st_size = IO_BLOCK_SIZE;
         stbuf->st_ino = inode.inode_num;
 	} else if(S_ISLNK(inode.metadata.permissions)){
-        stbuf->st_mode = S_IFLNK;
+        stbuf->st_mode = (mode_t)inode.metadata.permissions;
 		stbuf->st_nlink = 1;//inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
@@ -336,7 +380,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
         stbuf->st_size = inode.metadata.size;
         stbuf->st_ino = inode.inode_num;
     } else {
-		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_mode = (mode_t)inode.metadata.permissions;
 		stbuf->st_nlink = inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
@@ -421,9 +465,19 @@ void FilesOperation::unlink_inode(u_int64_t inode_number) {
 }
 
 int FilesOperation::fischl_opendir(const char* path, struct fuse_file_info* fi) {
+
     u_int64_t fh = namei(path);
-    if (fh < 0){
-        return -1;
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
+    INode_Data inode;
+    inode.inode_num = fh;
+    
+    fs->inode_manager->load_inode(&inode);
+    if(!permission_check(X_OK|R_OK, &inode)){
+        return -EACCES;
     }
     fi->fh = fh;
     return 0;
@@ -587,6 +641,28 @@ int FilesOperation::fischl_open(const char *path, struct fuse_file_info *fi){
     FileNode *get_file;
     if((get_file = fischl_load_entry(root_node, path)) == NULL)
         return -ENOENT;
+
+    INode_Data inode;
+    inode.inode_num = get_file->inode_number;
+    
+    fs->inode_manager->load_inode(&inode);
+
+    if (fi->flags & O_WRONLY){
+        if (!permission_check(W_OK, &inode)) {
+            return -EACCES; // Permission denied
+        }
+    }
+    if (fi->flags & O_RDONLY){
+        if (!permission_check(R_OK, &inode)) {
+            return -EACCES; // Permission denied
+        }
+    }
+    if (fi->flags & O_RDWR){
+        if (!permission_check(R_OK|W_OK, &inode)) {
+            return -EACCES; // Permission denied
+        }
+    }
+
     //if need to do with flag fi->flags ((fi->flags & O_ACCMODE)). Initial setting ALL access
     //create function will handle file descriptor fi->fh
     fi->fh = get_file->inode_number;
@@ -690,7 +766,7 @@ int FilesOperation::fischl_symlink(const char* to, const char* from){
     }
     u_int64_t parent_inode_number = parent_filenode->inode_number;
     //make new inode
-    INode_Data* ret = create_new_inode(parent_inode_number, newFilename, S_IFLNK);
+    INode_Data* ret = create_new_inode(parent_inode_number, newFilename, S_IFLNK|0777);
     if (ret == NULL) return -1;//ENOSPC but create_new_inode handle ENAMETOOLONG EEXIST
     //make new node in RAM
     fischl_add_entry(parent_filenode->subdirectory, ret->inode_num, newFilename, ret);

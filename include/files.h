@@ -16,6 +16,8 @@ class FilesOperation {
     void initialize_rootinode();
     void printbuffer(const char*,int);
     void printDirectory(u_int64_t);
+    bool permission_check(int, INode_Data*);
+    bool permission_check_by_inode_num(int, u_int64_t);
     INode_Data* create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode);
     int insert_inode_to(u_int64_t parent_inode_number, const char* name, INode_Data *new_inode, bool check_replace);
     void unlink_inode(u_int64_t inode_number);
