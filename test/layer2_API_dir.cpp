@@ -206,6 +206,34 @@ TEST(FileOperationTest, UnlinkTest) {
     printf("/AAA...AAA is inode %llu, it is a file\n", filelong);
 }
 
+TEST(FileOperationTest, renameTest){
+    struct fuse_file_info fi;
+    char read_buffer[IO_BLOCK_SIZE] = {0};
+
+    u_int64_t get_inode_num = fsop->disk_namei("/test");
+    fprintf(stderr,"[%s ,%d] /test inode %d\n",__func__,__LINE__,get_inode_num);
+    /*Cache are not yet implemented*/
+    // fsop->fischl_open("/test", &fi);
+    // fprintf(stderr,"[%s ,%d] fi.fh %d\n",__func__,__LINE__,fi.fh);
+    // fsop->fischl_read("/test", read_buffer, sizeof(read_buffer), 0, &fi);
+    // EXPECT_EQ(read_buffer[0], '1');
+
+    EXPECT_EQ(fsop->fischl_rename("/test", "/test123", 0),0);//defualt
+    EXPECT_EQ(fsop->disk_namei("/test123"),get_inode_num);
+    get_inode_num = fsop->disk_namei("/test");//should be failed becuase cannot find
+    fprintf(stderr,"[%s ,%d] /test inode %d\n",__func__,__LINE__,get_inode_num);
+    /*Cache are not yet implemented*/
+    // fsop->fischl_open("/test123", &fi);
+    // fprintf(stderr,"[%s ,%d] fi.fh %d\n",__func__,__LINE__,fi.fh);
+    // fsop->fischl_read("/test123", read_buffer, sizeof(read_buffer), 0, &fi);
+    // EXPECT_EQ(read_buffer[0], '1');
+    /*Read with hard disk*/
+    INode_Data inode;
+    inode.inode_num = fsop->disk_namei("/test123");
+    fs->inode_manager->load_inode(&inode);
+    fs->read(&inode, read_buffer, sizeof(read_buffer), 0);
+    EXPECT_EQ(read_buffer[0], '1');
+}
 
 int main(int argc, char **argv) {
     srand(time(NULL)); // Seed the random number generator

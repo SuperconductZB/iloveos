@@ -790,10 +790,11 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     RenameInfo rename_info;
     rename_info.exchangeExist = false;
     rename_info.oldParentNode = fischl_find_entry(root_node, oldParentPath);
-    rename_info.oldFileNode   = fischl_find_entry(rename_info.oldParentNode->subdirectory, filename);
+    //if path end with / means to rename directory
+    rename_info.oldFileNode   = strlen(filename)? fischl_find_entry(rename_info.oldParentNode->subdirectory, filename):rename_info.oldParentNode;
 
     if (rename_info.oldFileNode == NULL) {
-        printf("path %s not found by fischl_find_entry\n", old_path);
+        fprintf(stderr,"[%s ,%d] path %s not found by fischl_find_entry\n",__func__,__LINE__, old_path);
         free(pathdup);
         return -1;
     }
@@ -832,7 +833,10 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
 
     // Normal rename logic if no flags are specified; can overwirte
     // Hard Disk rename
+    if(rename_info.oldFileNode->subdirectory != NULL){//secure its directory
+        //remove its record from subdirectory; find .. from subdirectory
 
+    }
     // remove its record from parent
     INode_Data parent_INode;
     parent_INode.inode_num = rename_info.oldParentNode->inode_number;
