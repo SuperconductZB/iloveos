@@ -39,6 +39,10 @@ int total_file_num = 0;
 int total_free_dir = 0;
 int total_free_file = 0;
 
+FileNode* fischl_load_entry(TreeNode *root, const char *path){
+    return fischl_find_entry(fs, root, path);
+}
+
 TEST(FileOperationTest, MkdirnodTest) {
 
     fsop->initialize_rootinode();
@@ -95,19 +99,19 @@ TEST(FileOperationTest, RamDiskTest) {
     FileNode* get_dir;
     u_int64_t get_disk_inum;
 
-    get_dir = fischl_find_entry(fsop->root_node, "/test");//this is file
+    get_dir = fischl_load_entry(fsop->root_node, "/test");//this is file
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "test");
     get_disk_inum = fsop->disk_namei("/test");
     EXPECT_EQ(get_disk_inum, get_dir->inode_number);
 
-    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/baz");//this is file
+    get_dir = fischl_load_entry(fsop->root_node, "/foo/bar/baz");//this is file
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "baz");
     get_disk_inum = fsop->disk_namei("/foo/bar/baz");
     EXPECT_EQ(get_disk_inum, get_dir->inode_number);
 
-    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/..");
+    get_dir = fischl_load_entry(fsop->root_node, "/foo/bar/..");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "foo");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory
@@ -115,7 +119,7 @@ TEST(FileOperationTest, RamDiskTest) {
     EXPECT_EQ(get_disk_inum, get_dir->inode_number);
     fsop->printDirectory(get_disk_inum);
 
-    get_dir = fischl_find_entry(fsop->root_node, "/foo/bar/.");
+    get_dir = fischl_load_entry(fsop->root_node, "/foo/bar/.");
     EXPECT_TRUE(get_dir != NULL);//detect this should find success 
     EXPECT_STREQ(get_dir->name, "bar");
     ASSERT_TRUE(get_dir->subdirectory != NULL);//secure it is directory

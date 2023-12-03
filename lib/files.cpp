@@ -6,6 +6,10 @@
 #include <sstream>
 #include <cassert>
 
+FileNode* FilesOperation::fischl_load_entry(TreeNode *root, const char *path){
+    return fischl_find_entry(fs, root, path);
+}
+
 void FilesOperation::printbuffer(const char* buff, int len) {
     for(int i=0;i<len;i++){
         printf("%x ",buff[i]);
@@ -181,7 +185,7 @@ u_int64_t FilesOperation::disk_namei(const char* path) {
 }
 
 u_int64_t FilesOperation::namei(const char* path) {
-    FileNode* filenode = fischl_find_entry(root_node, path);
+    FileNode* filenode = fischl_load_entry(root_node, path);
     if (filenode) return filenode->inode_number;
     else return -1;
 }
@@ -194,7 +198,7 @@ int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
     char *newDirname = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
 
-    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
@@ -220,7 +224,7 @@ int FilesOperation::fischl_mknod(const char* path, mode_t mode, dev_t dev) {
     char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
     // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
-    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
@@ -246,7 +250,7 @@ int FilesOperation::fischl_create(const char* path, mode_t mode, struct fuse_fil
     char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
     // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
-    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
@@ -339,7 +343,7 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
 }
 
 int FilesOperation::fischl_releasedir(const char *path, struct fuse_file_info *fi){
-    if(fischl_find_entry(root_node, path) == NULL)
+    if(fischl_load_entry(root_node, path) == NULL)
         return -ENOENT;
     //do with file descriptor that cannot be used
     fi->fh = -1;
@@ -401,9 +405,9 @@ int FilesOperation::fischl_rmdir(const char* path) {
         printf("refusing to remove . or ..\n");
         return -1;
     }
-    FileNode *parent_filenode = fischl_find_entry(root_node, ParentPath);
+    FileNode *parent_filenode = fischl_load_entry(root_node, ParentPath);
     if (parent_filenode == NULL) {
-        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        printf("parent %s not found by fischl_load_entry\n", ParentPath);
         free(pathdup);
         return -1;
     }
@@ -495,9 +499,9 @@ int FilesOperation::fischl_unlink(const char* path) {
         printf("refusing to remove . or ..\n");
         return -1;
     }
-    FileNode *parent_filenode = fischl_find_entry(root_node, ParentPath);
+    FileNode *parent_filenode = fischl_load_entry(root_node, ParentPath);
     if (parent_filenode == NULL) {
-        printf("parent %s not found by fischl_find_entry\n", ParentPath);
+        printf("parent %s not found by fischl_load_entry\n", ParentPath);
         free(pathdup);
         return -1;
     }
@@ -547,7 +551,7 @@ int FilesOperation::fischl_open(const char *path, struct fuse_file_info *fi){
      if no files will use create function
     */
     FileNode *get_file;
-    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+    if((get_file = fischl_load_entry(root_node, path)) == NULL)
         return -ENOENT;
     //if need to do with flag fi->flags ((fi->flags & O_ACCMODE)). Initial setting ALL access
     //create function will handle file descriptor fi->fh
@@ -560,7 +564,7 @@ int FilesOperation::fischl_release(const char *path, struct fuse_file_info *fi){
      if no files will use create function
     */
     FileNode *get_file;
-    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+    if((get_file = fischl_load_entry(root_node, path)) == NULL)
         return -ENOENT;
     //do with file descriptor that cannot be used
     fi->fh = -1;
@@ -579,7 +583,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
 	 */
     // use path for debug, filedescriptor is enough
     // FileNode *get_file;
-    // if((get_file = fischl_find_entry(root_node, path)) == NULL)
+    // if((get_file = fischl_load_entry(root_node, path)) == NULL)
     //     return -ENOENT;
     // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
     // based on current write_datablock API implement, when write_datablock pass with actual size not index this function should be fixed
@@ -613,7 +617,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
 
 int FilesOperation::fischl_readlink(const char* path, char* buf, size_t size){
     FileNode *get_file;
-    if((get_file = fischl_find_entry(root_node, path)) == NULL)
+    if((get_file = fischl_load_entry(root_node, path)) == NULL)
         return -ENOENT;
     INode_Data symlink_inode;
     symlink_inode.inode_num = get_file->inode_number;
@@ -644,7 +648,7 @@ int FilesOperation::fischl_symlink(const char* to, const char* from){
     char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
     // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
-    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
@@ -738,7 +742,7 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
 int FilesOperation::fischl_link(const char* from, const char* to){
 
     FileNode *get_file;
-    if((get_file = fischl_find_entry(root_node, from)) == NULL)
+    if((get_file = fischl_load_entry(root_node, from)) == NULL)
         return -ENOENT;
     INode_Data ret;
     ret.inode_num = get_file->inode_number;
@@ -751,7 +755,7 @@ int FilesOperation::fischl_link(const char* from, const char* to){
     char *newFilename = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
     char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
     // fprintf(stderr,"[%s ,%d] ParentPath:%s, strlen=%d\n",__func__,__LINE__, ParentPath, strlen(ParentPath));
-    FileNode *parent_filenode = strlen(ParentPath)? fischl_find_entry(root_node, ParentPath): root_node->self_info;
+    FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
         fprintf(stderr,"[%s ,%d] ParentPath:{%s} not found\n",__func__,__LINE__, ParentPath);
         free(pathdup);
@@ -786,11 +790,11 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     //put old path info in rename struct
     RenameInfo rename_info;
     rename_info.exchangeExist = false;
-    rename_info.oldParentNode = fischl_find_entry(root_node, oldParentPath);
-    rename_info.oldFileNode   = fischl_find_entry(rename_info.oldParentNode->subdirectory, filename);
+    rename_info.oldParentNode = fischl_load_entry(root_node, oldParentPath);
+    rename_info.oldFileNode   = fischl_load_entry(rename_info.oldParentNode->subdirectory, filename);
 
     if (rename_info.oldFileNode == NULL) {
-        printf("path %s not found by fischl_find_entry\n", old_path);
+        printf("path %s not found by fischl_load_entry\n", old_path);
         free(pathdup);
         return -1;
     }
@@ -802,8 +806,8 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     char *newParentPath = new_pathdup;//pathdup are separated by pathdup, so it take <parent path> only
     //put new path info in rename struct
     rename_info.newName       = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
-    rename_info.newFileNode   = fischl_find_entry(root_node, new_path);
-    rename_info.newParentNode = strlen(newParentPath)? fischl_find_entry(root_node, newParentPath): root_node->self_info;
+    rename_info.newFileNode   = fischl_load_entry(root_node, new_path);
+    rename_info.newParentNode = strlen(newParentPath)? fischl_load_entry(root_node, newParentPath): root_node->self_info;
 
     //configure with flag
     if (flags & RENAME_NOREPLACE) {

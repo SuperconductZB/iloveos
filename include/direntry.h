@@ -38,7 +38,7 @@ int fischl_rm_entry(TreeNode *parent, const char *fileName);
 /*if want to use dir mode use the subdirectory treeNode pointer */
 //e.g. FileNode *Dirnode = fischl_find_entry(); can see file inside with Dirnode->subdirectory
 //e.g. go to the current Dirnode parent directory, use TreeNode *get_Dir_parent = Dirnode->subdirectory->parent;
-FileNode *fischl_find_entry(TreeNode *root, const char *path);
+FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path);
 
 void freeTree(TreeNode *node);
 /*for debug use*/

@@ -213,7 +213,7 @@ int fischl_rm_entry(TreeNode *parent, const char *fileName) {
 }
 
 
-FileNode *fischl_find_entry(TreeNode *root, const char *path){
+FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
     //support . and .. function
     char *pathCopy = strdup(path);
     char *segment = strtok(pathCopy, "/");
