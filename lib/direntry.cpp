@@ -247,7 +247,8 @@ FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
                     DirectoryEntry ent;
                     for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
                         ent.deserialize(buffer+i);
-                        if (ent.inode_number && strcmp(ent.file_name, segment)) {
+                        //printf("WARNING:%d %llu %llu %s %s\n",__LINE__,inode.inode_num, ent.inode_number, ent.file_name, segment);
+                        if (ent.inode_number && strcmp(ent.file_name, segment)==0) {
                             if(fischl_add_entry_for_cache(current, ent.inode_number, ent.file_name, &inode, file)<0){
                                 return NULL;
                             }

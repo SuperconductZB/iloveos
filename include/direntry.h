@@ -19,6 +19,7 @@ typedef struct treeNode {
     FileNode *self_info; //self fileNode infromation
 } TreeNode;
 
+/*
 typedef struct RenameInfo {
     FileNode *oldFileNode;       // The file node being renamed.
     FileNode *oldParentNode;     // The parent directory of the file node being renamed.
@@ -26,7 +27,7 @@ typedef struct RenameInfo {
     char *newName;               // The new name of the file node after the rename.
     FileNode *newFileNode;       // The new file node, if one already exists at the target location.
     bool exchangeExist;          // Flag to indicate if the rename should replace an existing file node.
-} RenameInfo;
+} RenameInfo;*/
 
 /*for root*/
 TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Data *new_inode);
