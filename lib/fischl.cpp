@@ -221,7 +221,9 @@ int fischl(int argc, char *argv[])
         return 0;
     }
     options.fs = new Fs(options.H);
-    if(!options.load)options.fs->format();
+    if(!options.load){
+        printf("FORMAT %d\n", options.fs->format());
+    }
     options.fsop = new FilesOperation(*options.H, options.fs);
 
 
