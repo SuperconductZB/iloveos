@@ -495,6 +495,7 @@ int FilesOperation::fischl_chown(const char *path, uid_t uid, gid_t gid, struct 
 
 
 int FilesOperation::fischl_unlink(const char* path) {
+    
     char *pathdup = strdup(path);
     char *lastSlash = strrchr(pathdup, '/');
     *lastSlash = '\0';
@@ -963,5 +964,15 @@ int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2]
     inode.metadata.access_time = (u_int64_t)tv[0].tv_sec * 1000000000ULL + tv[0].tv_nsec;
     inode.metadata.modification_time = (u_int64_t)tv[1].tv_sec * 1000000000ULL + tv[1].tv_nsec;
     fs->inode_manager->save_inode(&inode);
+    return 0;
+}
+
+int FilesOperation::fischl_statfs(const char* path, struct statvfs* stbuf) {
+    stbuf->f_bsize = 4096;
+    stbuf->f_blocks = 0;
+    stbuf->f_bfree = 0;
+    stbuf->f_files = 0;
+    stbuf->f_ffree = 0;
+    stbuf->f_namemax = 256;
     return 0;
 }

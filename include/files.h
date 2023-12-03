@@ -41,4 +41,5 @@ class FilesOperation {
     int fischl_write(const char *, const char *, size_t, off_t, struct fuse_file_info *);
     int fischl_read(const char *, char *, size_t, off_t, struct fuse_file_info *);
     int fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi);
+    int fischl_statfs(const char* path, struct statvfs* stbuf);
 };

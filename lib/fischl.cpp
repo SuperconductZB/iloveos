@@ -33,6 +33,7 @@ static const struct fuse_opt option_spec[] = {
 };
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
+    cfg->use_ino = 1;
     options.fsop->initialize_rootinode();
 }
 
@@ -126,7 +127,7 @@ static int fischl_write(const char *path, const char *buf, size_t size, off_t of
 }
 
 static int fischl_statfs(const char* path, struct statvfs* stbuf) {
-    return -1;
+    return options.fsop->fischl_statfs(path, stbuf);
 }
 
 static int fischl_release(const char* path, struct fuse_file_info *fi) {
@@ -156,7 +157,7 @@ static const struct fuse_operations fischl_oper = {
     .open        = fischl_open,
     .read        = fischl_read,
     .write       = fischl_write,
-    //.statfs      = fischl_statfs,
+    .statfs      = fischl_statfs,
     .release     = fischl_release,
     /*
 #ifdef HAVE_SETXATTR
