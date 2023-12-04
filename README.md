@@ -19,6 +19,29 @@ cmake ..
 make # cmake --build . is same
 ```
 
+## mount and test
+normal usage:
+```bash
+./fischl diskpath n -s mountpoint
+```
+diskpath must be provided following ./fischl
+l/n must be provided following diskpath indicating whether to load the exisiting file system or create a new one.
+for loading:
+```bash
+./fischl diskpath l -s mountpoint
+```
+-s is also required because our fs doesn't support multi-threading.
+
+if the diskpath need to be accessed by root:
+```bash
+sudo ./fischl diskpath n -o allow_other -s mountpoint
+```
+
+for debugging:
+```bash
+sudo ./fischl diskpath n -o allow_other -d -s mountpoint
+```
+
 ## run test
 ### add your own test file on test/CMakeList.txt
 ```

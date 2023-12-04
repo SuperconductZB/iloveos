@@ -65,13 +65,16 @@ int main(int argc, char *argv[]) {
                   1); // the first 8 bytes of 4k I/O block will store
                       // the next address(after 2048*4k I/O block)
   // test the end of the datablock
-  
-  H->read_block(fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1, buffer);
+
+  H->read_block(fs->disk->diskSize / IO_BLOCK_SIZE -
+                    DATABLOCKS_PER_BITMAP_BLOCK - 1,
+                buffer);
   t = 0;
   for (int j = 0; j < 8; j++)
     t |= ((u_int64_t)(unsigned char)buffer[j]) << (8 * j);
 
-  assert(t == fs->disk->diskSize/IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1);
+  assert(t ==
+         fs->disk->diskSize / IO_BLOCK_SIZE - DATABLOCKS_PER_BITMAP_BLOCK - 1);
 
   /***************************test inode
    * de/allocation**********************************/
@@ -109,34 +112,35 @@ int main(int argc, char *argv[]) {
   // after free the datablock, the program will find the first smallest address
   // of datablock to give to the inode should test random resize each node, but
   // should use datablock_free data structure to record
-  u_int64_t rec_datablock_free[10][3] = {0}; // array version
-  u_int64_t temp_block_num = 0;
-  for (int i = 0; i < 10; i++) {
-    printf("%dth data block starting addres: ", i);
-    for (int j = 0; j < 6; j++) {
-      fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      printf("%llu," ,temp_block_num);
-    }
-    printf("\n");
-  }
-  for (int i = 0; i < 10; i++) {
-    printf("%dth data block free addres: ", i);
-    for (int j = 2; j >= 0; j--) {
-      fs->deallocate_datablock(&inode_list[i], &(rec_datablock_free[i][j]));
-      printf("%llu,", rec_datablock_free[i][j]);
-    }
-    printf("\n");
-  }
+  //   u_int64_t rec_datablock_free[10][3] = {0}; // array version
+  //   u_int64_t temp_block_num = 0;
+  //   for (int i = 0; i < 10; i++) {
+  //     // printf("%dth data block starting addres: ", i);
+  //     for (int j = 0; j < 6; j++) {
+  //       fs->allocate_datablock(&inode_list[i], &temp_block_num);
+  //       // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+  //     }
+  //     // printf("\n");
+  //   }
+  //   for (int i = 0; i < 10; i++) {
+  //     // printf("%dth data block free addres: ", i);
+  //     for (int j = 2; j >= 0; j--) {
+  //       fs->deallocate_datablock(&inode_list[i],
+  //       &(rec_datablock_free[i][j]));
+  //       // printf("", rec_datablock_free[i][j]);
+  //     }
+  //     // printf("\n");
+  //   }
 
-  for (int i = 0; i < 10; i++) {
-     printf("%dth data block allocate again addres: ", i);
-    for (int j = 0; j < 3; j++) {
-      fs->allocate_datablock(&inode_list[i], &temp_block_num);
-      //assert(temp_block_num == rec_datablock_free[i][j]);
-      printf("%llu," ,temp_block_num);
-    }
-    printf("\n");
-  }
+  //   for (int i = 0; i < 10; i++) {
+  //     // printf("%dth data block allocate again addres: ", i);
+  //     for (int j = 0; j < 3; j++) {
+  //       fs->allocate_datablock(&inode_list[i], &temp_block_num);
+  //       assert(temp_block_num == rec_datablock_free[i][j]);
+  //       // printf("%d," ,inode_inside[i].datablock_allocate(*H));
+  //     }
+  //     // printf("\n");
+  //   }
 
   // printf("}\n");
   delete H; // Delete the RawDisk object

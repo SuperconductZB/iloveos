@@ -12,9 +12,9 @@
 #include <unistd.h>
 
 #define IO_BLOCK_SIZE 4096
+#define INDIRECT_BLOCKS 512
 
 #define NUM_INODE_BLOCKS 1023
-#define NUM_BLOCKS 2048
 
 #define INODE_SIZE 512
 

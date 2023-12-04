@@ -156,6 +156,26 @@ TreeNode *fischl_init_entry(int new_inode_number, const char *fileName, INode_Da
     return newDir;
 }
 
+FileNode* fischl_add_entry_for_cache(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode){
+    char *Name = strdup(fileName);
+    TreeNode *newDir = NULL;
+    /*If directory, malloc TreeNode, and then create filenode that belongs to Parent hash table content*/
+    if ((new_inode->metadata.permissions & S_IFMT) == S_IFDIR) {
+        newDir = (TreeNode *)malloc(sizeof(TreeNode));
+        newDir->dirName = Name;
+        newDir->contents = createHashTable(20);//hasSize define 20
+        newDir->parent = parent;
+    }
+    FileNode *newFile = insertHash(parent->contents, Name, newDir); //newDir == NULL indicates it's a file
+    //assign INode *new_inode metadata to data member in FileNode structure
+    newFile->permissions = new_inode->metadata.permissions;
+    newFile->inode_number = new_inode_number;
+    //Diretory have its own file information, that is . here
+    if(newDir != NULL)
+        newDir->self_info = newFile;
+    return newFile;
+}
+
 int fischl_add_entry(TreeNode *parent, int new_inode_number, const char *fileName, INode_Data *new_inode){
     char *Name = strdup(fileName);
     TreeNode *newDir = NULL;
@@ -191,12 +211,14 @@ int fischl_rm_entry(TreeNode *parent, const char *fileName) {
 }
 
 
-FileNode *fischl_find_entry(TreeNode *root, const char *path){
+FileNode *fischl_find_entry(Fs *fs, TreeNode *root, const char *path){
     //support . and .. function
     char *pathCopy = strdup(path);
     char *segment = strtok(pathCopy, "/");
     TreeNode *current = root;
     FileNode *file = NULL;
+
+    printf("FINDING %s %s %llu\n", path, segment, current->self_info->inode_number);
 
     while (segment != NULL && current != NULL) {
         if (strcmp(segment, "..") == 0) {
@@ -214,8 +236,29 @@ FileNode *fischl_find_entry(TreeNode *root, const char *path){
         } 
         else{
             file = lookupHash(current->contents, segment);
+            if (file == NULL) {
+                // find on disk whether this exists
+                INode_Data inode;
+                inode.inode_num = current->self_info->inode_number;
+                fs->inode_manager->load_inode(&inode);
+                char buffer[IO_BLOCK_SIZE] = {0};
+                for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
+                    fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
+                    DirectoryEntry ent;
+                    for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
+                        ent.deserialize(buffer+i);
+                        //printf("WARNING:%d %llu %llu %s %s\n",__LINE__,inode.inode_num, ent.inode_number, ent.file_name, segment);
+                        if (ent.inode_number && strcmp(ent.file_name, segment)==0) {
+                            file = fischl_add_entry_for_cache(current, ent.inode_number, ent.file_name, &inode);
+                            //printf("DONE !! %llu\n", file->inode_number);
+                            break;
+                        }
+                    }
+                }
+            }
             if (file != NULL && file->subdirectory == NULL) {
                 free(pathCopy);
+                printf("FOUND !! %llu\n", file->inode_number);
                 return file; //File found
                 //return current; return filenode
             }

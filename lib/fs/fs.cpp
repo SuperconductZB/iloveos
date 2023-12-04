@@ -1,10 +1,13 @@
 #include "fs.hpp"
+#include <assert.h>
 
 Fs::Fs(RawDisk *disk) : disk(disk) {
+  assert((disk->diskSize / IO_BLOCK_SIZE) >
+         2 + NUM_INODE_BLOCKS + DATABLOCKS_PER_BITMAP_BLOCK);
   superblock = SuperBlock_Data();
   inode_manager = new INode_Manager_Freelist(this, 1, 1 + NUM_INODE_BLOCKS);
-  datablock_manager =
-      new DataBlock_Manager_Bitmap(this, 1 + NUM_INODE_BLOCKS, disk->diskSize/IO_BLOCK_SIZE);
+  datablock_manager = new DataBlock_Manager_Bitmap(
+      this, 1 + NUM_INODE_BLOCKS, disk->diskSize / IO_BLOCK_SIZE);
 };
 
 Fs::~Fs() {

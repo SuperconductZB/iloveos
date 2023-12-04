@@ -1,4 +1,5 @@
 #include "fs.hpp"
+#include <time.h>
 
 template <typename T> T write_int(T num, char buf[]) {
   size_t i = 0;
@@ -50,11 +51,15 @@ void SuperBlock_Data::deserialize(char buf[]) {
 }
 
 INode_Data::INode_Data(u_int64_t inode_num) : inode_num(inode_num) {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
   metadata.uid = -1;
   metadata.gid = -1;
   metadata.permissions = -1;
   metadata.size = 0;
-  metadata.reference_count = 0;
+  metadata.access_time = (u_int64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  metadata.modification_time = (u_int64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+  metadata.reference_count = 1;
 
   single_indirect_block = double_indirect_block = triple_indirect_block = 0;
 
@@ -68,6 +73,8 @@ size_t INode_Data::serialize_metadata(char buf[]) {
   i += write_u64(metadata.gid, &buf[i]);
   i += write_u64(metadata.permissions, &buf[i]);
   i += write_u64(metadata.size, &buf[i]);
+  i += write_u64(metadata.access_time, &buf[i]);
+  i += write_u64(metadata.modification_time, &buf[i]);
   i += write_u32(metadata.reference_count, &buf[i]);
   i += write_u32(metadata.flags, &buf[i]);
   return i;
@@ -79,6 +86,8 @@ size_t INode_Data::deserialize_metadata(char buf[]) {
   i += read_u64(&metadata.gid, &buf[i]);
   i += read_u64(&metadata.permissions, &buf[i]);
   i += read_u64(&metadata.size, &buf[i]);
+  i += read_u64(&metadata.access_time, &buf[i]);
+  i += read_u64(&metadata.modification_time, &buf[i]);
   i += read_u32(&metadata.reference_count, &buf[i]);
   i += read_u32(&metadata.flags, &buf[i]);
   return i;
