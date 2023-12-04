@@ -26,7 +26,7 @@ add_executable(fischl
 
 enable_testing()
 add_subdirectory(test)
-# add_subdirectory(googletest)
+add_subdirectory(googletest)
 
 # Add the -Wall flag
 target_compile_options(fischl PRIVATE -Wall)

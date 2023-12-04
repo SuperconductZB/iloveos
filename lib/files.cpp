@@ -428,7 +428,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf,
 		stbuf->st_size = inode.metadata.size;
         stbuf->st_ino = inode.inode_num;
 	}
-    perror(std::to_string(inode.inode_num).c_str());
+    //perror(std::to_string(inode.inode_num).c_str());
 	return res;
 }
 
@@ -754,7 +754,7 @@ int FilesOperation::fischl_write(const char *path, const char *buf, size_t size,
     // Allocate memory for the new buffer
     char* buffer = (char*)malloc(size);
     memcpy(buffer, buf, size);
-    size_t bytes_write = fs->write(&inode, buffer, size, offset);
+    ssize_t bytes_write = fs->write(&inode, buffer, size, offset);
     /*size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
     size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
     while (bytes_write < size) {
@@ -1123,13 +1123,13 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
 
 int FilesOperation::fischl_truncate(const char *path, off_t offset,
                                     struct fuse_file_info *fi) {
-  (void)fi;
-  int res = 0;
-  u_int64_t fh = namei(path);
+    (void)fi;
+    int res = 0;
+    u_int64_t fh = namei(path);
 
-  if (fh == -1) {
-    return -ENOENT;
-  }
+    if (fh == -1) {
+        return -ENOENT;
+    }
 
     INode_Data inode;
     inode.inode_num = fh;
@@ -1137,19 +1137,9 @@ int FilesOperation::fischl_truncate(const char *path, off_t offset,
     if(!permission_check(W_OK, &inode)){
         return -EACCES;
     }
-    while(inode.metadata.size > offset + IO_BLOCK_SIZE) {
-        printf("dealloc, %d\n", inode.metadata.size);
-        u_int64_t dummy;
-        fs->deallocate_datablock(&inode, &dummy);
-        if (inode.metadata.size < IO_BLOCK_SIZE){
-            inode.metadata.size = 0;
-            break;
-        }
-        inode.metadata.size-=IO_BLOCK_SIZE;
-    }
-    inode.metadata.size = offset;
+    res = fs->truncate(&inode, offset);
     fs->inode_manager->save_inode(&inode);
-    return 0;
+    return res;
 }
 
 int FilesOperation::fischl_read(const char *path, char *buf, size_t size,
@@ -1171,7 +1161,11 @@ int FilesOperation::fischl_read(const char *path, char *buf, size_t size,
   // Assuming inode is correctly initialized here based on 'path'
   inode.inode_num = fi->fh;
   fs->inode_manager->load_inode(&inode);
-  size_t bytes_read = fs->read(&inode, buf, size, offset);
+  //printf("OUT READ %llu %llu %llu\n", inode.inode_num, inode.single_indirect_block, inode.double_indirect_block);
+  ssize_t bytes_read = fs->read(&inode, buf, size, offset);
+  //printf("BYTES_READ %d\n",int(bytes_read));
+  //for (int i = 0; i < bytes_read; i++)printf("%x", buf[i]&0xff);
+  //printf("\n");
   /*size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  //
   Assuming each block is 4096 bytes
 
@@ -1195,37 +1189,7 @@ int FilesOperation::fischl_read(const char *path, char *buf, size_t size,
   buf, block_buffer); bytes_read += copy_size; block_index++; block_offset = 0;
   // Only the first block might have a non-zero offset
   }*/
-
-  r
-  eturn bytes_read; // Return the actual number of bytes read
-}
-
-int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi){
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = namei(path);
-
-    if (fh == -1){
-        return -ENOENT;
-    }
-
-    INode_Data inode;
-    inode.inode_num = fh;
-    fs->inode_manager->load_inode(&inode);
-    inode.metadata.access_time = (u_int64_t)tv[0].tv_sec * 1000000000ULL + tv[0].tv_nsec;
-    inode.metadata.modification_time = (u_int64_t)tv[1].tv_sec * 1000000000ULL + tv[1].tv_nsec;
-    fs->inode_manager->save_inode(&inode);
-    return 0;
-}
-
-int FilesOperation::fischl_statfs(const char* path, struct statvfs* stbuf) {
-    stbuf->f_bsize = 4096;
-    stbuf->f_blocks = 0;
-    stbuf->f_bfree = 0;
-    stbuf->f_files = 0;
-    stbuf->f_ffree = 0;
-    stbuf->f_namemax = 256;
-    return 0;
+  return bytes_read; // Return the actual number of bytes read
 }
 
 int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi){

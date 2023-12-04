@@ -31,6 +31,8 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
                                DatablockOperation *op) {
   int result;
 
+  //printf("SWEEP %llu %llu %llu\n", inode_data->inode_num, inode_data->single_indirect_block, inode_data->double_indirect_block);
+
   u_int64_t start_index = start_block_index;
   for (size_t i = start_index; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {
     if ((result = sweep_datablocks(&(inode_data->direct_blocks[i]), 0, 0,
@@ -94,6 +96,8 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
     }
   }
 
+  //if((*block_num)>30000000000000LL)printf("DIES 1 %llu %d %llu\n", *block_num, indirect_num, start_block_index);
+
   if (indirect_num == 0) {
     bool delete_block = false;
     if ((result = op->operation(*block_num, &delete_block)) < 0)
@@ -109,6 +113,7 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   if ((*block_num) == 0) {
     memset(buf, 0, sizeof(buf));
   } else {
+    
     if ((err = disk->read_block(*block_num, buf)) < 0)
       return err;
   }
@@ -170,6 +175,7 @@ public:
         std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
     if (block_num != 0) {
+      if((block_num)>3000000000000LL)printf("DIES 2\n");
       if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
         return err;
 
@@ -198,9 +204,11 @@ public:
     size_t write_size =
         std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
-    if (write_size < IO_BLOCK_SIZE)
+    if (write_size < IO_BLOCK_SIZE){
+      if((block_num)>3000000000000LL)printf("DIES 3\n");
       if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
         return err;
+    }
 
     memcpy(&datablock_buf[offset], &buf[bytes_completed], write_size);
 
@@ -227,7 +235,7 @@ public:
       (*delete_block) = true;
       return 1;
     }
-
+  if((block_num)>3000000000000LL)printf("DIES 4\n");
     if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
       return err;
 
@@ -281,6 +289,7 @@ ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
   op.bytes_completed = 0;
   op.fs = this;
 
+  //printf("IN READ %llu %llu %llu\n", inode_data->inode_num, inode_data->single_indirect_block, inode_data->double_indirect_block);
   if ((err = sweep_inode_datablocks(inode_data, start_block_index, false,
                                     &op)) != 0)
     return err;

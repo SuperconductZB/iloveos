@@ -209,6 +209,11 @@ int fischl(int argc, char *argv[])
     }
     else{
         options.H = new RealRawDisk(argv[0]);
+        char zero_es[IO_BLOCK_SIZE] = {0};
+        /*printf("zeroed\n");
+        for (int i = 0; i < 200000; i++){
+            options.H->write_block(i, zero_es);
+        }*/
     }
     if(strcmp(argv[1], "l")==0){
         options.load = true;
@@ -225,6 +230,65 @@ int fischl(int argc, char *argv[])
         printf("FORMAT %d\n", options.fs->format());
     }
     options.fsop = new FilesOperation(*options.H, options.fs);
+
+      /*INode_Data inode_data;
+  options.fs->inode_manager->new_inode(1, 2, 3, &inode_data);
+
+  int buf_size = 100000;
+  int seg_size = 10;
+  char buf[buf_size];
+
+  int res;
+  int num = 1;
+
+  for (u_int64_t i = 0; i < 30 * 1024 * 1024;) {
+    for (int j = 0; j < buf_size;) {
+      j += sprintf(&buf[j], "%010d\n", ++num);
+    }
+    res = options.fs->write(&inode_data, buf, buf_size, i);
+    if (res < buf_size)
+      printf("ERR: %d %d\n", res, i);
+    i += res;
+  }
+
+  num = 1;
+
+  printf("done write\n");
+  char buf2[buf_size];
+
+  for (u_int64_t i = 0; i < 30 * 1024 * 1024;) {
+    for (int j = 0; j < buf_size;) {
+      j += sprintf(&buf[j], "%010d\n", ++num);
+    }
+    res = options.fs->read(&inode_data, buf2, buf_size, i);
+    if (res < buf_size)
+      printf("ERR2: %d %d\n", res, i);
+    i += res;
+    for (int j = 0; j < res; ++j) {
+      if (buf[j] != buf2[j])
+        printf("err err err: %d %d", buf[j], i);
+    }
+  }
+
+  printf("done read\n");
+
+  num = 1;
+
+  for (u_int64_t i = 0; i < 30 * 1024 * 1024;) {
+    for (int j = 0; j < buf_size;) {
+      j += sprintf(&buf[j], "%010d\n", ++num);
+    }
+    res = options.fs->read(&inode_data, buf2, buf_size, i);
+    if (res < buf_size)
+      printf("ERR2: %d %d\n", res, i);
+    i += res;
+    for (int j = 0; j < res; ++j) {
+      if (buf[j] != buf2[j])
+        printf("err err err: %d %d", buf[j], i);
+    }
+  }
+
+  printf("done read2\n");*/
 
 
 

@@ -43,6 +43,8 @@ RealRawDisk::RealRawDisk(const char *directory)
     exit(1);
   }
 
+  //diskSize = 27648 * IO_BLOCK_SIZE;
+
   // Calculate the size in bytes
   numSectors = diskSize / 512; // Assuming a sector size of 512 bytes
 
@@ -61,12 +63,16 @@ int RealRawDisk::read_block(u_int64_t block_number, char *buffer) {
   u_int64_t offset = block_number * IO_BLOCK_SIZE;
 
   if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
+    printf("LSEEK ERROR %llu %llu\n", block_number, offset);
     perror("Error seeking to offset");
     return -1;
   }
 
   // TODO: this is incorrect
   ssize_t bytesRead = read(fd, buffer, IO_BLOCK_SIZE);
+  //printf("READ BLOCK: %llu\n", block_number);
+  //for (int i = 0; i < IO_BLOCK_SIZE; i++)printf("%x", buffer[i]&0xff);
+  //printf("\n");
   if (bytesRead < IO_BLOCK_SIZE) {
     perror("Error reading from device");
     return -1;
