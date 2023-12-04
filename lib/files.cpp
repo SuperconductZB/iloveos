@@ -785,6 +785,7 @@ int FilesOperation::fischl_readlink(const char* path, char* buf, size_t size){
     //char buffer[symlink_inode.metadata.size];
     //memset(buffer, 0, sizeof(buffer));
     fs->read(&symlink_inode, buf, symlink_inode.metadata.size, 0);
+    buf[symlink_inode.metadata.size] = 0;
     //printf("READLINK %d %s\n", symlink_inode.metadata.size, buf);
     /*u_int64_t fh = namei(buffer);
     if (fh == -1){
