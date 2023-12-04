@@ -1,7 +1,7 @@
 #include "fs.hpp"
 
 DataBlock_Manager::DataBlock_Manager(Fs *fs, u_int64_t block_segment_start,
-                                         u_int64_t block_segment_end)
+                                     u_int64_t block_segment_end)
     : fs(fs), block_segment_start(block_segment_start),
       block_segment_end(block_segment_end) {}
 
@@ -57,6 +57,10 @@ int DataBlock_Manager_Bitmap::new_datablock(u_int64_t *block_num) {
 
   if ((err = fs->disk->read_block(bitmap_block_num, bitmap.buf)) < 0)
     return err;
+
+  // if (bitmap.get_next_node() == fs->superblock.free_list_head)
+  //   printf("WARNING: ON LAST BITMAP "
+  //          "BLOCK!\n");
 
   u_int64_t relative_block_num = bitmap.claim_relative_block();
 
@@ -122,6 +126,7 @@ int DataBlock_Manager_Bitmap::format() {
   char buf[IO_BLOCK_SIZE] = {0};
   int err;
   u_int64_t i = block_segment_start;
+  write_u64(i, buf);
   for (; i <= block_segment_end - (2 * bitmap_region_size);
        i += bitmap_region_size) {
     write_u64(i + bitmap_region_size, buf);

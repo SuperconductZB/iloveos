@@ -10,12 +10,12 @@ void RawDisk::print_block(u_int64_t block_number) {
     return;
   }
 
-  printf("\nBlock %llu:\n", block_number);
+  printf("\nBlock %lu:\n", block_number);
   for (int i = 0; i < IO_BLOCK_SIZE; i += sizeof(u_int64_t)) {
     num = 0;
     for (int j = 0; j < 8; j++)
       num |= ((u_int64_t)(unsigned char)buf[i + j]) << (8 * j);
-    printf("%llu ", num);
+    printf("%lu ", num);
     if ((i / sizeof(u_int64_t)) % nums_per_line == nums_per_line - 1)
       printf("\n");
   }
@@ -47,8 +47,8 @@ RealRawDisk::RealRawDisk(const char *directory)
   numSectors = diskSize / 512; // Assuming a sector size of 512 bytes
 
   printf("====Initializing RawDisk====\n");
-  printf("Number of sectors: %llu\n", numSectors);
-  printf("Disk size (in bytes): %llu\n", diskSize);
+  printf("Number of sectors: %lu\n", numSectors);
+  printf("Disk size (in bytes): %lu\n", diskSize);
 }
 
 RealRawDisk::~RealRawDisk() {
@@ -101,7 +101,7 @@ FakeRawDisk::FakeRawDisk(u_int64_t num_blocks) {
     exit(1);
   }
   printf("====Initializing FAKE RawDisk====\n");
-  printf("FAKE Disk size (in bytes): %llu\n", diskSize);
+  printf("FAKE Disk size (in bytes): %lu\n", diskSize);
   perror("!!! USING FAKE RawDisk - THIS IS FOR TESTING ONLY !!!");
 }
 

@@ -15,20 +15,12 @@ public:
   Fs(RawDisk *disk);
   ~Fs();
 
-  int allocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num);
-  int deallocate_datablock(INode_Data *inode_data, u_int64_t *datablock_num);
-
   ssize_t read(INode_Data *inode_data, char buf[], size_t count, size_t offset);
-  ssize_t write(INode_Data *inode_data, char buf[], size_t count,
+  ssize_t write(INode_Data *inode_data, const char buf[], size_t count,
                 size_t offset);
-
-  int sweep_inode_datablocks(INode_Data *inode_data,
-                             u_int64_t start_block_index, bool allocate,
-                             DatablockOperation *op);
-
-  int sweep_datablocks(u_int64_t *block_num, int indirect_num,
-                       u_int64_t start_block_index, bool allocate,
-                       DatablockOperation *op);
+  int truncate(INode_Data *inode_data, size_t length);
+  ssize_t lseek_next_data(INode_Data *inode_data, size_t offset);
+  ssize_t lseek_next_hole(INode_Data *inode_data, size_t offset);
 
   int format();
 
@@ -44,8 +36,13 @@ public:
   int save_free_list_head(u_int64_t new_free_list_head);
   int save_inode_list_head(u_int64_t new_inode_list_head);
 
-  int allocate_indirect(u_int64_t *storage, int n, u_int64_t *datablock_num);
-  int deallocate_indirect(u_int64_t *storage, int n, u_int64_t *datablock_num);
+  int sweep_inode_datablocks(INode_Data *inode_data,
+                             u_int64_t start_block_index, bool allocate,
+                             DatablockOperation *op);
+
+  int sweep_datablocks(u_int64_t *block_num, int indirect_num,
+                       u_int64_t start_block_index, bool allocate,
+                       DatablockOperation *op);
 };
 
 #endif

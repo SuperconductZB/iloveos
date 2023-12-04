@@ -2,37 +2,38 @@
 #define FUSE_USE_VERSION 31
 
 #include "files.h"
-#include <string.h>
-#include <sstream>
 #include <cassert>
+#include <sstream>
+#include <string.h>
 
 FileNode* FilesOperation::fischl_load_entry(TreeNode *root, const char *path){
     return fischl_find_entry(fs, root, path);
 }
 
-void FilesOperation::printbuffer(const char* buff, int len) {
-    for(int i=0;i<len;i++){
-        printf("%x ",buff[i]);
-    }
-    printf("\n");
+void FilesOperation::printbuffer(const char *buff, int len) {
+  for (int i = 0; i < len; i++) {
+    printf("%x ", buff[i]);
+  }
+  printf("\n");
 }
 
-FilesOperation::FilesOperation(RawDisk& disk_, Fs* fs): disk(disk_) {
-    this->fs = fs;
+FilesOperation::FilesOperation(RawDisk &disk_, Fs *fs) : disk(disk_) {
+  this->fs = fs;
 }
 
-void FilesOperation::create_dot_dotdot(INode_Data* inode, u_int64_t parent_inode_number) {
-    char buffer[IO_BLOCK_SIZE] = {0};
-    DirectoryEntry dot;
-    dot.inode_number = inode->inode_num;
-    strcpy(dot.file_name, ".");
-    dot.serialize(buffer);
-    DirectoryEntry dotdot;
-    dotdot.inode_number = parent_inode_number;
-    strcpy(dotdot.file_name, "..");
-    dotdot.serialize(buffer+264);
-    int ret = fs->write(inode, buffer, IO_BLOCK_SIZE, 0);
-    //printf("in create_dot_dotdot: fs->write returned %d\n",ret);
+void FilesOperation::create_dot_dotdot(INode_Data *inode,
+                                       u_int64_t parent_inode_number) {
+  char buffer[IO_BLOCK_SIZE] = {0};
+  DirectoryEntry dot;
+  dot.inode_number = inode->inode_num;
+  strcpy(dot.file_name, ".");
+  dot.serialize(buffer);
+  DirectoryEntry dotdot;
+  dotdot.inode_number = parent_inode_number;
+  strcpy(dotdot.file_name, "..");
+  dotdot.serialize(buffer + 264);
+  int ret = fs->write(inode, buffer, IO_BLOCK_SIZE, 0);
+  // printf("in create_dot_dotdot: fs->write returned %d\n",ret);
 }
 
 void FilesOperation::initialize_rootinode() {
@@ -61,52 +62,57 @@ void FilesOperation::initialize(bool load) {
 }
 
 void FilesOperation::printDirectory(u_int64_t inode_number) {
-    INode_Data inode;
-    inode.inode_num = inode_number;
-    fs->inode_manager->load_inode(&inode);
-    char buffer[IO_BLOCK_SIZE] = {0};
-    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-        fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-        DirectoryEntry ent;
-        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-            ent.deserialize(buffer+i);
-            if (ent.inode_number) printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
-        }
+  INode_Data inode;
+  inode.inode_num = inode_number;
+  fs->inode_manager->load_inode(&inode);
+  char buffer[IO_BLOCK_SIZE] = {0};
+  for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+    fs->read(&inode, buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+    DirectoryEntry ent;
+    for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+      ent.deserialize(buffer + i);
+      if (ent.inode_number)
+        printf("%s\t%llu;\t", ent.file_name, ent.inode_number);
     }
-    printf("\n");
+  }
+  printf("\n");
 }
 
-INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, const char* name, mode_t mode) {
-    // trys to create a file under parent directory
-    if (strlen(name)>=256) {
-        perror("Name too long, cannot create file or directory");
-        return NULL;
-    }
-    INode_Data inode;
-    inode.inode_num = parent_inode_number;
-    fs->inode_manager->load_inode(&inode);
-    if ((inode.metadata.permissions & S_IFMT) != S_IFDIR) {
-        fprintf(stderr,"[%s ,%d] please create under directory\n",__func__,__LINE__);
-        return NULL;
-    }
+INode_Data *FilesOperation::create_new_inode(u_int64_t parent_inode_number,
+                                             const char *name, mode_t mode) {
+  // trys to create a file under parent directory
+  if (strlen(name) >= 256) {
+    perror("Name too long, cannot create file or directory");
+    return NULL;
+  }
+  INode_Data inode;
+  inode.inode_num = parent_inode_number;
+  fs->inode_manager->load_inode(&inode);
+  if ((inode.metadata.permissions & S_IFMT) != S_IFDIR) {
+    fprintf(stderr, "[%s ,%d] please create under directory\n", __func__,
+            __LINE__);
+    return NULL;
+  }
 
-    // Check if file or directory already exists
-    char r_buffer[IO_BLOCK_SIZE] = {0};
-    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-        fs->read(&inode, r_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-        DirectoryEntry ent;
-        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-            ent.deserialize(r_buffer+i);
-            if (strcmp(ent.file_name, name)==0 && ent.inode_number != 0) {
-                if((mode & S_IFMT) == S_IFDIR){
-                    fprintf(stderr,"[%s ,%d] %s/ already exists\n",__func__,__LINE__, name);
-                }else{
-                    fprintf(stderr,"[%s ,%d] %s already exists\n",__func__,__LINE__, name);
-                }                  
-                return NULL;
-            }
+  // Check if file or directory already exists
+  char r_buffer[IO_BLOCK_SIZE] = {0};
+  for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+    fs->read(&inode, r_buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+    DirectoryEntry ent;
+    for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+      ent.deserialize(r_buffer + i);
+      if (strcmp(ent.file_name, name) == 0 && ent.inode_number != 0) {
+        if ((mode & S_IFMT) == S_IFDIR) {
+          fprintf(stderr, "[%s ,%d] %s/ already exists\n", __func__, __LINE__,
+                  name);
+        } else {
+          fprintf(stderr, "[%s ,%d] %s already exists\n", __func__, __LINE__,
+                  name);
         }
+        return NULL;
+      }
     }
+  }
 
     bool allocated = false;
     INode_Data *new_inode = new INode_Data();
@@ -117,86 +123,91 @@ INode_Data* FilesOperation::create_new_inode(u_int64_t parent_inode_number, cons
         fs->inode_manager->save_inode(new_inode);
     }
 
-    char rw_buffer[IO_BLOCK_SIZE] = {0};
-    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-        fs->read(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-        DirectoryEntry ent;
-        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-            ent.deserialize(rw_buffer+i);
-            if (ent.inode_number == 0) {
-                allocated = true;
-                ent.inode_number = new_inode->inode_num;
-                strcpy(ent.file_name, name);
-                ent.serialize(rw_buffer+i);
-                break;
-            }
-        }
-        if (allocated) {
-            fs->write(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-            break;
-        }
-    }
-
-    if (!allocated) {
-        char write_buffer[IO_BLOCK_SIZE] = {0};
-        DirectoryEntry ent;
+  char rw_buffer[IO_BLOCK_SIZE] = {0};
+  for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+    fs->read(&inode, rw_buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+    DirectoryEntry ent;
+    for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+      ent.deserialize(rw_buffer + i);
+      if (ent.inode_number == 0) {
+        allocated = true;
         ent.inode_number = new_inode->inode_num;
         strcpy(ent.file_name, name);
-        ent.serialize(write_buffer);
-        fs->write(&inode, write_buffer, IO_BLOCK_SIZE, (inode.metadata.size/IO_BLOCK_SIZE)*IO_BLOCK_SIZE);
-        fs->inode_manager->save_inode(&inode);
+        ent.serialize(rw_buffer + i);
+        break;
+      }
     }
+    if (allocated) {
+      fs->write(&inode, rw_buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+      break;
+    }
+  }
 
-    return new_inode;
+  if (!allocated) {
+    char write_buffer[IO_BLOCK_SIZE] = {0};
+    DirectoryEntry ent;
+    ent.inode_number = new_inode->inode_num;
+    strcpy(ent.file_name, name);
+    ent.serialize(write_buffer);
+    fs->write(&inode, write_buffer, IO_BLOCK_SIZE,
+              (inode.metadata.size / IO_BLOCK_SIZE) * IO_BLOCK_SIZE);
+    fs->inode_manager->save_inode(&inode);
+  }
+
+  return new_inode;
 }
 
-u_int64_t FilesOperation::disk_namei(const char* path) {
-    // returns the inode number corresponding to path
-    u_int64_t current_inode = root_node->self_info->inode_number;
-    std::string current_dirname;
-    std::istringstream pathStream(path);
-	std::string new_name;
-    std::getline(pathStream, new_name, '/');
-	if(!new_name.empty()){
-		printf("disk_namei: path should start with /\n");
-		return -1;
-	}
-	while (std::getline(pathStream, new_name, '/')) {
-		INode_Data inode;
-        inode.inode_num = current_inode;
-        fs->inode_manager->load_inode(&inode);
-        if ((inode.metadata.permissions & S_IFMT) != S_IFDIR || inode.metadata.size == 0) {
-            printf("disk_namei: %s is not a non-empty directory\n", current_dirname.c_str());
-            return -1;
-        }
-        u_int64_t new_inode_number = 0;
+u_int64_t FilesOperation::disk_namei(const char *path) {
+  // returns the inode number corresponding to path
+  u_int64_t current_inode = root_node->self_info->inode_number;
+  std::string current_dirname;
+  std::istringstream pathStream(path);
+  std::string new_name;
+  std::getline(pathStream, new_name, '/');
+  if (!new_name.empty()) {
+    printf("disk_namei: path should start with /\n");
+    return -1;
+  }
+  while (std::getline(pathStream, new_name, '/')) {
+    INode_Data inode;
+    inode.inode_num = current_inode;
+    fs->inode_manager->load_inode(&inode);
+    if ((inode.metadata.permissions & S_IFMT) != S_IFDIR ||
+        inode.metadata.size == 0) {
+      printf("disk_namei: %s is not a non-empty directory\n",
+             current_dirname.c_str());
+      return -1;
+    }
+    u_int64_t new_inode_number = 0;
 
-        char buffer[IO_BLOCK_SIZE] = {0};
-        for(u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-            fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-            DirectoryEntry ent;
-            for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-                ent.deserialize(buffer+i);
-                if (strcmp(ent.file_name, new_name.c_str()) == 0) {
-                    new_inode_number = ent.inode_number;
-                    break;
-                }
-            }
-            if (new_inode_number) break;
+    char buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+      fs->read(&inode, buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+      DirectoryEntry ent;
+      for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+        ent.deserialize(buffer + i);
+        if (strcmp(ent.file_name, new_name.c_str()) == 0) {
+          new_inode_number = ent.inode_number;
+          break;
         }
-        if (!new_inode_number) {
-            printf("disk_namei: no name matching %s under directory %s\n", new_name.c_str(), current_dirname.c_str());
-            return -1;
-        }
-        current_inode = new_inode_number;
-        current_dirname = new_name;
-	}
-    return current_inode;
-    // path = "/" should return root_inode_number (root_node->self_info->inode_number)
-    // path = "/foo.txt" should return inode for foo.txt
-    // path = "/mydir" should return inode for mydir
-    // path = "/nonemptydir/foo" should return inode for foo
-    // path = "/notnonemptydir/foo" should raise error
+      }
+      if (new_inode_number)
+        break;
+    }
+    if (!new_inode_number) {
+      printf("disk_namei: no name matching %s under directory %s\n",
+             new_name.c_str(), current_dirname.c_str());
+      return -1;
+    }
+    current_inode = new_inode_number;
+    current_dirname = new_name;
+  }
+  return current_inode;
+  // path = "/" should return root_inode_number
+  // (root_node->self_info->inode_number) path = "/foo.txt" should return inode
+  // for foo.txt path = "/mydir" should return inode for mydir path =
+  // "/nonemptydir/foo" should return inode for foo path = "/notnonemptydir/foo"
+  // should raise error
 }
 
 u_int64_t FilesOperation::namei(const char* path) {
@@ -280,13 +291,16 @@ int FilesOperation::fischl_access(const char* path, int mask) {
     return 0;
 } 
 
-int FilesOperation::fischl_mkdir(const char* path, mode_t mode) {
-    //check path
-    char *pathdup = strdup(path);
-    char *lastSlash = strrchr(pathdup, '/');
-    *lastSlash = '\0'; // Split the string into parent path and new directory name; <parent path>\0<direcotry name>
-    char *newDirname = lastSlash+1; //\0<direcotry name>, get from <direcotry name>
-    char *ParentPath = pathdup;//pathdup are separated by pathdup, so it take <parent path> only
+int FilesOperation::fischl_mkdir(const char *path, mode_t mode) {
+  // check path
+  char *pathdup = strdup(path);
+  char *lastSlash = strrchr(pathdup, '/');
+  *lastSlash = '\0'; // Split the string into parent path and new directory
+                     // name; <parent path>\0<direcotry name>
+  char *newDirname =
+      lastSlash + 1;          //\0<direcotry name>, get from <direcotry name>
+  char *ParentPath = pathdup; // pathdup are separated by pathdup, so it take
+                              // <parent path> only
 
     FileNode *parent_filenode = strlen(ParentPath)? fischl_load_entry(root_node, ParentPath): root_node->self_info;
     if (parent_filenode == NULL) {
@@ -368,19 +382,20 @@ int FilesOperation::fischl_create(const char* path, mode_t mode, struct fuse_fil
     return 0;//SUCESS
 }
 
-int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
+int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf,
+                                   struct fuse_file_info *fi) {
 
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = namei(path);
+  (void)fi;
+  int res = 0;
+  u_int64_t fh = namei(path);
 
-    if (fh == -1){
-        return -ENOENT;
-    }
+  if (fh == -1) {
+    return -ENOENT;
+  }
 
-    INode_Data inode;
-    inode.inode_num = fh;
-    fs->inode_manager->load_inode(&inode);
+  INode_Data inode;
+  inode.inode_num = fh;
+  fs->inode_manager->load_inode(&inode);
 
     //printf("GETATTR PERM %o\n", (mode_t)inode.metadata.permissions);
 
@@ -417,13 +432,16 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf, struct 
 	return res;
 }
 
-int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t ft, struct fuse_file_info *fi, enum fuse_readdir_flags flg) {
-	    //check path
-    u_int64_t fh = namei(path);
+int FilesOperation::fischl_readdir(const char *path, void *buf,
+                                   fuse_fill_dir_t filler, off_t ft,
+                                   struct fuse_file_info *fi,
+                                   enum fuse_readdir_flags flg) {
+  // check path
+  u_int64_t fh = namei(path);
 
-    if (fh == -1){
-        return -1;
-    }
+  if (fh == -1) {
+    return -1;
+  }
 
     INode_Data inode;
     inode.inode_num = fh;
@@ -444,7 +462,7 @@ int FilesOperation::fischl_readdir(const char *path, void *buf, fuse_fill_dir_t 
         }
     }
 
-    return 0;
+  return 0;
 }
 
 int FilesOperation::fischl_releasedir(const char *path, struct fuse_file_info *fi){
@@ -456,39 +474,30 @@ int FilesOperation::fischl_releasedir(const char *path, struct fuse_file_info *f
 }
 
 void FilesOperation::unlink_inode(u_int64_t inode_number) {
-    INode_Data inode;
-    inode.inode_num = inode_number;
-    fs->inode_manager->load_inode(&inode);
+  INode_Data inode;
+  inode.inode_num = inode_number;
+  fs->inode_manager->load_inode(&inode);
     if (inode.metadata.reference_count > 1 && (inode.metadata.permissions & S_IFMT) != S_IFDIR){
         inode.metadata.reference_count -= 1;
         fs->inode_manager->save_inode(&inode);
         return;
     }
-    if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
-        char buffer[IO_BLOCK_SIZE] = {0};
-        for(u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-            fs->read(&inode, buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-            DirectoryEntry ent;
-            for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-                if(ent.inode_number && strcmp(ent.file_name,".") && strcmp(ent.file_name,"..")){
-                    unlink_inode(ent.inode_number);
-                }
-            }
+  if ((inode.metadata.permissions & S_IFMT) == S_IFDIR) {
+    char buffer[IO_BLOCK_SIZE] = {0};
+    for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+      fs->read(&inode, buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+      DirectoryEntry ent;
+      for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+        if (ent.inode_number && strcmp(ent.file_name, ".") &&
+            strcmp(ent.file_name, "..")) {
+          unlink_inode(ent.inode_number);
         }
+      }
     }
-    // TODO: This is probably incorrect
-    // size is unsigned int
-    while(inode.metadata.size != 0) {
-        printf("dealloc, %d\n", inode.metadata.size);
-        u_int64_t dummy;
-        fs->deallocate_datablock(&inode, &dummy);
-        if (inode.metadata.size < IO_BLOCK_SIZE){
-            inode.metadata.size = 0;
-            break;
-        }
-        inode.metadata.size-=IO_BLOCK_SIZE;
-    }
-    fs->inode_manager->free_inode(&inode);
+  }
+  // TODO: error handling
+  int res = fs->truncate(&inode, 0);
+  fs->inode_manager->free_inode(&inode);
 }
 
 int FilesOperation::fischl_opendir(const char* path, struct fuse_file_info* fi) {
@@ -570,39 +579,41 @@ int FilesOperation::fischl_rmdir(const char* path) {
     }
 }
 
-int FilesOperation::fischl_chmod(const char *path, mode_t mode, struct fuse_file_info *fi) {
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = namei(path);
+int FilesOperation::fischl_chmod(const char *path, mode_t mode,
+                                 struct fuse_file_info *fi) {
+  (void)fi;
+  int res = 0;
+  u_int64_t fh = namei(path);
 
-    if (fh == -1){
-        return -ENOENT;
-    }
+  if (fh == -1) {
+    return -ENOENT;
+  }
 
-    INode_Data inode;
-    inode.inode_num = fh;
-    fs->inode_manager->load_inode(&inode);
-    inode.metadata.permissions = mode;
-    fs->inode_manager->save_inode(&inode);
-    return 0;
+  INode_Data inode;
+  inode.inode_num = fh;
+  fs->inode_manager->load_inode(&inode);
+  inode.metadata.permissions = mode;
+  fs->inode_manager->save_inode(&inode);
+  return 0;
 }
 
-int FilesOperation::fischl_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi) {
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = namei(path);
+int FilesOperation::fischl_chown(const char *path, uid_t uid, gid_t gid,
+                                 struct fuse_file_info *fi) {
+  (void)fi;
+  int res = 0;
+  u_int64_t fh = namei(path);
 
-    if (fh == -1){
-        return -ENOENT;
-    }
+  if (fh == -1) {
+    return -ENOENT;
+  }
 
-    INode_Data inode;
-    inode.inode_num = fh;
-    fs->inode_manager->load_inode(&inode);
-    inode.metadata.uid = uid;
-    inode.metadata.gid = gid;
-    fs->inode_manager->save_inode(&inode);
-    return 0;
+  INode_Data inode;
+  inode.inode_num = fh;
+  fs->inode_manager->load_inode(&inode);
+  inode.metadata.uid = uid;
+  inode.metadata.gid = gid;
+  fs->inode_manager->save_inode(&inode);
+  return 0;
 }
 
 
@@ -864,39 +875,40 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
         }
     }
 
-    bool allocated = false;
+  bool allocated = false;
 
-    char rw_buffer[IO_BLOCK_SIZE] = {0};
-    for (u_int64_t idx=0; idx<inode.metadata.size/IO_BLOCK_SIZE; idx++) {
-        fs->read(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-        DirectoryEntry ent;
-        for(int i=0;i<=IO_BLOCK_SIZE-264;i+=264){
-            ent.deserialize(rw_buffer+i);
-            if (ent.inode_number == 0) {
-                allocated = true;
-                ent.inode_number = new_inode->inode_num;
-                strcpy(ent.file_name, name);
-                ent.serialize(rw_buffer+i);
-                break;
-            }
-        }
-        if (allocated) {
-            fs->write(&inode, rw_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
-            break;
-        }
-    }
-
-    if (!allocated) {
-        char write_buffer[IO_BLOCK_SIZE] = {0};
-        DirectoryEntry ent;
+  char rw_buffer[IO_BLOCK_SIZE] = {0};
+  for (u_int64_t idx = 0; idx < inode.metadata.size / IO_BLOCK_SIZE; idx++) {
+    fs->read(&inode, rw_buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+    DirectoryEntry ent;
+    for (int i = 0; i <= IO_BLOCK_SIZE - 264; i += 264) {
+      ent.deserialize(rw_buffer + i);
+      if (ent.inode_number == 0) {
+        allocated = true;
         ent.inode_number = new_inode->inode_num;
         strcpy(ent.file_name, name);
-        ent.serialize(write_buffer);
-        fs->write(&inode, write_buffer, IO_BLOCK_SIZE, (inode.metadata.size/IO_BLOCK_SIZE)*IO_BLOCK_SIZE);
-        fs->inode_manager->save_inode(&inode);
+        ent.serialize(rw_buffer + i);
+        break;
+      }
     }
+    if (allocated) {
+      fs->write(&inode, rw_buffer, IO_BLOCK_SIZE, idx * IO_BLOCK_SIZE);
+      break;
+    }
+  }
 
-    return 0;
+  if (!allocated) {
+    char write_buffer[IO_BLOCK_SIZE] = {0};
+    DirectoryEntry ent;
+    ent.inode_number = new_inode->inode_num;
+    strcpy(ent.file_name, name);
+    ent.serialize(write_buffer);
+    fs->write(&inode, write_buffer, IO_BLOCK_SIZE,
+              (inode.metadata.size / IO_BLOCK_SIZE) * IO_BLOCK_SIZE);
+    fs->inode_manager->save_inode(&inode);
+  }
+
+  return 0;
 }
 
 int FilesOperation::fischl_link(const char* from, const char* to){
@@ -1109,14 +1121,15 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
     return 0;
 }
 
-int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_file_info *fi){
-    (void) fi;
-	int res = 0;
-    u_int64_t fh = namei(path);
+int FilesOperation::fischl_truncate(const char *path, off_t offset,
+                                    struct fuse_file_info *fi) {
+  (void)fi;
+  int res = 0;
+  u_int64_t fh = namei(path);
 
-    if (fh == -1){
-        return -ENOENT;
-    }
+  if (fh == -1) {
+    return -ENOENT;
+  }
 
     INode_Data inode;
     inode.inode_num = fh;
@@ -1139,45 +1152,80 @@ int FilesOperation::fischl_truncate(const char *path, off_t offset, struct fuse_
     return 0;
 }
 
-int FilesOperation::fischl_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
-    /** Read data from an open file
-	 *
-	 * Read should return exactly the number of bytes requested except
-	 * on EOF or error, otherwise the rest of the data will be
-	 * substituted with zeroes.	 An exception to this is when the
-	 * 'direct_io' mount option is specified, in which case the return
-	 * value of the read system call will reflect the return value of
-	 * this operation.
-	 */
-    // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not the exact write size.
-    // based on current read_datablock API implement, when read_datablock pass with actual size not index this function should be fixed 
+int FilesOperation::fischl_read(const char *path, char *buf, size_t size,
+                                off_t offset, struct fuse_file_info *fi) {
+  /** Read data from an open file
+   *
+   * Read should return exactly the number of bytes requested except
+   * on EOF or error, otherwise the rest of the data will be
+   * substituted with zeroes.	 An exception to this is when the
+   * 'direct_io' mount option is specified, in which case the return
+   * value of the read system call will reflect the return value of
+   * this operation.
+   */
+  // Caution! this based on content in file are multiple of IO_BLOCK_SIZE, not
+  // the exact write size. based on current read_datablock API implement, when
+  // read_datablock pass with actual size not index this function should be
+  // fixed
+  INode_Data inode;
+  // Assuming inode is correctly initialized here based on 'path'
+  inode.inode_num = fi->fh;
+  fs->inode_manager->load_inode(&inode);
+  size_t bytes_read = fs->read(&inode, buf, size, offset);
+  /*size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  //
+  Assuming each block is 4096 bytes
+
+  if (offset >= len) return 0;  // Offset is beyond the end of the file
+  if (offset + size > len) size = len - offset;  // Adjust size if it goes
+  beyond EOF
+
+  size_t bytes_read = 0;
+  size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
+  size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
+  // fprintf(stderr,"[%s ,%d] inode.metadata.size %d\n",__func__,__LINE__,
+  inode.metadata.size); while (bytes_read < size && block_index <
+  inode.metadata.size/IO_BLOCK_SIZE) { char block_buffer[IO_BLOCK_SIZE];  //
+  Temporary buffer for each block fs->read(&inode, block_buffer, IO_BLOCK_SIZE,
+  block_index*IO_BLOCK_SIZE);
+      // fprintf(stderr,"[%s ,%d] block_index %d\n",__func__,__LINE__,
+  block_index); size_t copy_size = std::min(size - bytes_read, IO_BLOCK_SIZE -
+  block_offset); memcpy(buf + bytes_read, block_buffer + block_offset,
+  copy_size);
+      // fprintf(stderr,"[%s ,%d] buf %s, block_buffer %s\n",__func__,__LINE__,
+  buf, block_buffer); bytes_read += copy_size; block_index++; block_offset = 0;
+  // Only the first block might have a non-zero offset
+  }*/
+
+  r
+  eturn bytes_read; // Return the actual number of bytes read
+}
+
+int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi){
+    (void) fi;
+	int res = 0;
+    u_int64_t fh = namei(path);
+
+    if (fh == -1){
+        return -ENOENT;
+    }
+
     INode_Data inode;
-    // Assuming inode is correctly initialized here based on 'path'
-    inode.inode_num = fi->fh;
+    inode.inode_num = fh;
     fs->inode_manager->load_inode(&inode);
-    size_t bytes_read = fs->read(&inode, buf, size, offset);
-    /*size_t len = (inode.metadata.size/IO_BLOCK_SIZE) * IO_BLOCK_SIZE;  // Assuming each block is 4096 bytes
+    inode.metadata.access_time = (u_int64_t)tv[0].tv_sec * 1000000000ULL + tv[0].tv_nsec;
+    inode.metadata.modification_time = (u_int64_t)tv[1].tv_sec * 1000000000ULL + tv[1].tv_nsec;
+    fs->inode_manager->save_inode(&inode);
+    return 0;
+}
 
-    if (offset >= len) return 0;  // Offset is beyond the end of the file
-    if (offset + size > len) size = len - offset;  // Adjust size if it goes beyond EOF
-
-    size_t bytes_read = 0;
-    size_t block_index = offset / IO_BLOCK_SIZE;  // Starting block index
-    size_t block_offset = offset % IO_BLOCK_SIZE; // Offset within the first block
-    // fprintf(stderr,"[%s ,%d] inode.metadata.size %d\n",__func__,__LINE__, inode.metadata.size);
-    while (bytes_read < size && block_index < inode.metadata.size/IO_BLOCK_SIZE) {
-        char block_buffer[IO_BLOCK_SIZE];  // Temporary buffer for each block
-        fs->read(&inode, block_buffer, IO_BLOCK_SIZE, block_index*IO_BLOCK_SIZE);
-        // fprintf(stderr,"[%s ,%d] block_index %d\n",__func__,__LINE__, block_index);
-        size_t copy_size = std::min(size - bytes_read, IO_BLOCK_SIZE - block_offset);
-        memcpy(buf + bytes_read, block_buffer + block_offset, copy_size);
-        // fprintf(stderr,"[%s ,%d] buf %s, block_buffer %s\n",__func__,__LINE__, buf, block_buffer);
-        bytes_read += copy_size;
-        block_index++;
-        block_offset = 0;  // Only the first block might have a non-zero offset
-    }*/
-
-    return bytes_read;  // Return the actual number of bytes read
+int FilesOperation::fischl_statfs(const char* path, struct statvfs* stbuf) {
+    stbuf->f_bsize = 4096;
+    stbuf->f_blocks = 0;
+    stbuf->f_bfree = 0;
+    stbuf->f_files = 0;
+    stbuf->f_ffree = 0;
+    stbuf->f_namemax = 256;
+    return 0;
 }
 
 int FilesOperation::fischl_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi){
