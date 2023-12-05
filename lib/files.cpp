@@ -872,6 +872,7 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
                     return -1;
                 }
                 else{
+                    //printf("RENAME HAPPENS %s %s\n", );
                     ent.inode_number = new_inode->inode_num;
                     ent.serialize(r_buffer+i);
                     fs->write(&inode, r_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
@@ -1119,6 +1120,7 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
             break;
         }
     }
+    fischl_rm_entry(rename_info.newParentNode->subdirectory, rename_info.newName);
     fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
     
     //free path
