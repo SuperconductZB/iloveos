@@ -35,6 +35,7 @@ static const struct fuse_opt option_spec[] = {
 
 void* fischl_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
     cfg->use_ino = 1;
+    conn->want &= ~FUSE_CAP_ATOMIC_O_TRUNC;
     options.fsop->initialize(options.load);
 }
 

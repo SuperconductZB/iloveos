@@ -117,7 +117,7 @@ INode_Data *FilesOperation::create_new_inode(u_int64_t parent_inode_number,
     bool allocated = false;
     INode_Data *new_inode = new INode_Data();
     fs->inode_manager->new_inode(getuid(), getgid(), mode, new_inode);
-    //printf("%llu\n",new_inode->inode_num);
+    printf("NEW INODE %llu %llu %llu %o\n",new_inode->inode_num, new_inode->metadata.uid, new_inode->metadata.gid, (mode_t)new_inode->metadata.permissions);
     if ((mode & S_IFMT) == S_IFDIR) {
         create_dot_dotdot(new_inode, parent_inode_number);
         fs->inode_manager->save_inode(new_inode);
@@ -423,6 +423,7 @@ int FilesOperation::fischl_getattr(const char *path, struct stat *stbuf,
 		stbuf->st_nlink = inode.metadata.reference_count;
         stbuf->st_uid = inode.metadata.uid;
         stbuf->st_gid = inode.metadata.gid;
+        //printf("GETATTR %llu %llu %llu %o\n", inode.inode_num, inode.metadata.uid, inode.metadata.gid, (mode_t)inode.metadata.permissions);
         stbuf->st_atime = (time_t)(inode.metadata.access_time / 1000000000ULL);
         stbuf->st_mtime = (time_t)(inode.metadata.modification_time / 1000000000ULL);
 		stbuf->st_size = inode.metadata.size;
@@ -610,8 +611,12 @@ int FilesOperation::fischl_chown(const char *path, uid_t uid, gid_t gid,
   INode_Data inode;
   inode.inode_num = fh;
   fs->inode_manager->load_inode(&inode);
-  inode.metadata.uid = uid;
-  inode.metadata.gid = gid;
+  if(uid != (uid_t)(-1)){
+    inode.metadata.uid = uid;
+  }
+  if(gid != (gid_t)(-1)){
+    inode.metadata.gid = gid;
+  }
   fs->inode_manager->save_inode(&inode);
   return 0;
 }
@@ -867,6 +872,7 @@ int FilesOperation::insert_inode_to(u_int64_t parent_inode_number, const char* n
                     return -1;
                 }
                 else{
+                    //printf("RENAME HAPPENS %s %s\n", );
                     ent.inode_number = new_inode->inode_num;
                     ent.serialize(r_buffer+i);
                     fs->write(&inode, r_buffer, IO_BLOCK_SIZE, idx*IO_BLOCK_SIZE);
@@ -1113,6 +1119,9 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
             change_flag = false;
             break;
         }
+    }
+    if(rename_info.newParentNode != NULL){
+        fischl_rm_entry(rename_info.newParentNode->subdirectory, rename_info.newName);
     }
     fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
     
