@@ -1120,7 +1120,9 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path, un
             break;
         }
     }
-    fischl_rm_entry(rename_info.newParentNode->subdirectory, rename_info.newName);
+    if(rename_info.newParentNode != NULL){
+        fischl_rm_entry(rename_info.newParentNode->subdirectory, rename_info.newName);
+    }
     fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
     
     //free path
