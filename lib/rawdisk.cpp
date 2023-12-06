@@ -43,7 +43,7 @@ RealRawDisk::RealRawDisk(const char *directory)
     exit(1);
   }
 
-  //diskSize = 27648 * IO_BLOCK_SIZE;
+  // diskSize = 27648 * IO_BLOCK_SIZE;
 
   // Calculate the size in bytes
   numSectors = diskSize / 512; // Assuming a sector size of 512 bytes
@@ -65,16 +65,18 @@ int RealRawDisk::read_block(u_int64_t block_number, char *buffer) {
   if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
     printf("LSEEK ERROR %llu %llu\n", block_number, offset);
     perror("Error seeking to offset");
+    errno = EIO;
     return -1;
   }
 
   // TODO: this is incorrect
   ssize_t bytesRead = read(fd, buffer, IO_BLOCK_SIZE);
-  //printf("READ BLOCK: %llu\n", block_number);
-  //for (int i = 0; i < IO_BLOCK_SIZE; i++)printf("%x", buffer[i]&0xff);
-  //printf("\n");
+  // printf("READ BLOCK: %llu\n", block_number);
+  // for (int i = 0; i < IO_BLOCK_SIZE; i++)printf("%x", buffer[i]&0xff);
+  // printf("\n");
   if (bytesRead < IO_BLOCK_SIZE) {
     perror("Error reading from device");
+    errno = EIO;
     return -1;
   }
 
@@ -86,6 +88,7 @@ int RealRawDisk::write_block(u_int64_t block_number, char *buffer) {
 
   if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
     perror("Error seeking to offset");
+    errno = EIO;
     return -1;
   }
 
@@ -93,6 +96,7 @@ int RealRawDisk::write_block(u_int64_t block_number, char *buffer) {
   ssize_t bytesWritten = write(fd, buffer, IO_BLOCK_SIZE);
   if (bytesWritten < IO_BLOCK_SIZE) {
     perror("Error writing to device");
+    errno = EIO;
     return -1;
   }
 
@@ -118,6 +122,7 @@ int FakeRawDisk::read_block(u_int64_t block_number, char *buffer) {
 
   if (offset + IO_BLOCK_SIZE > diskSize) {
     perror("Error reading past fake disk size");
+    errno = EIO;
     return -1;
   }
 
@@ -131,6 +136,7 @@ int FakeRawDisk::write_block(u_int64_t block_number, char *buffer) {
 
   if (offset + IO_BLOCK_SIZE > diskSize) {
     perror("Error writing past fake disk size");
+    errno = EIO;
     return -1;
   }
 
