@@ -18,7 +18,7 @@ public:
   ssize_t read(INode_Data *inode_data, char buf[], size_t count, size_t offset);
   ssize_t write(INode_Data *inode_data, const char buf[], size_t count,
                 size_t offset);
-  int truncate(INode_Data *inode_data, size_t length);
+  int truncate(INode_Data *inode_data, off_t length);
   ssize_t lseek_next_data(INode_Data *inode_data, size_t offset);
   ssize_t lseek_next_hole(INode_Data *inode_data, size_t offset);
 

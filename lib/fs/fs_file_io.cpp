@@ -31,7 +31,8 @@ int Fs::sweep_inode_datablocks(INode_Data *inode_data,
                                DatablockOperation *op) {
   int result;
 
-  //printf("SWEEP %llu %llu %llu\n", inode_data->inode_num, inode_data->single_indirect_block, inode_data->double_indirect_block);
+  // printf("SWEEP %llu %llu %llu\n", inode_data->inode_num,
+  // inode_data->single_indirect_block, inode_data->double_indirect_block);
 
   u_int64_t start_index = start_block_index;
   for (size_t i = start_index; i < NUMBER_OF_DIRECT_BLOCKS; ++i) {
@@ -96,7 +97,8 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
     }
   }
 
-  //if((*block_num)>30000000000000LL)printf("DIES 1 %llu %d %llu\n", *block_num, indirect_num, start_block_index);
+  // if((*block_num)>30000000000000LL)printf("DIES 1 %llu %d %llu\n",
+  // *block_num, indirect_num, start_block_index);
 
   if (indirect_num == 0) {
     bool delete_block = false;
@@ -113,7 +115,7 @@ int Fs::sweep_datablocks(u_int64_t *block_num, int indirect_num,
   if ((*block_num) == 0) {
     memset(buf, 0, sizeof(buf));
   } else {
-    
+
     if ((err = disk->read_block(*block_num, buf)) < 0)
       return err;
   }
@@ -175,7 +177,8 @@ public:
         std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
     if (block_num != 0) {
-      if((block_num)>3000000000000LL)printf("DIES 2\n");
+      if ((block_num) > 3000000000000LL)
+        printf("DIES 2\n");
       if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
         return err;
 
@@ -204,8 +207,9 @@ public:
     size_t write_size =
         std::min(IO_BLOCK_SIZE - offset, count - bytes_completed);
 
-    if (write_size < IO_BLOCK_SIZE){
-      if((block_num)>3000000000000LL)printf("DIES 3\n");
+    if (write_size < IO_BLOCK_SIZE) {
+      if ((block_num) > 3000000000000LL)
+        printf("DIES 3\n");
       if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
         return err;
     }
@@ -235,7 +239,8 @@ public:
       (*delete_block) = true;
       return 1;
     }
-  if((block_num)>3000000000000LL)printf("DIES 4\n");
+    if ((block_num) > 3000000000000LL)
+      printf("DIES 4\n");
     if ((err = fs->disk->read_block(block_num, datablock_buf)) < 0)
       return err;
 
@@ -289,9 +294,10 @@ ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
   op.bytes_completed = 0;
   op.fs = this;
 
-  //printf("IN READ %llu %llu %llu\n", inode_data->inode_num, inode_data->single_indirect_block, inode_data->double_indirect_block);
+  // printf("IN READ %llu %llu %llu\n", inode_data->inode_num,
+  // inode_data->single_indirect_block, inode_data->double_indirect_block);
   if ((err = sweep_inode_datablocks(inode_data, start_block_index, false,
-                                    &op)) != 0)
+                                    &op)) < 0)
     return err;
 
   return op.bytes_completed;
@@ -300,6 +306,11 @@ ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
 ssize_t Fs::write(INode_Data *inode_data, const char buf[], size_t count,
                   size_t offset) {
   int err;
+
+  if (count + offset > FILE_SIZE_MAX) {
+    errno = EFBIG;
+    return -1;
+  }
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
@@ -311,8 +322,8 @@ ssize_t Fs::write(INode_Data *inode_data, const char buf[], size_t count,
   op.bytes_completed = 0;
   op.fs = this;
 
-  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true,
-                                    &op)) != 0)
+  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true, &op)) <
+      0)
     return err;
 
   inode_data->metadata.size =
@@ -321,8 +332,18 @@ ssize_t Fs::write(INode_Data *inode_data, const char buf[], size_t count,
   return op.bytes_completed;
 }
 
-int Fs::truncate(INode_Data *inode_data, size_t length) {
+int Fs::truncate(INode_Data *inode_data, off_t length) {
   int err;
+
+  if (length > FILE_SIZE_MAX) {
+    errno = EFBIG;
+    return -1;
+  }
+
+  if (length < 0) {
+    errno = EINVAL;
+    return -1;
+  }
 
   u_int64_t start_block_index = length / IO_BLOCK_SIZE;
   size_t internal_offset = length - (start_block_index * IO_BLOCK_SIZE);
@@ -343,8 +364,10 @@ int Fs::truncate(INode_Data *inode_data, size_t length) {
 ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
   int err;
 
-  if (offset >= inode_data->metadata.size)
+  if (offset >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
@@ -359,8 +382,10 @@ ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
                                     &op)) < 0)
     return err;
 
-  if (op.bytes_completed >= inode_data->metadata.size)
+  if (op.bytes_completed >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   return op.bytes_completed;
 }
@@ -368,8 +393,10 @@ ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
 ssize_t Fs::lseek_next_hole(INode_Data *inode_data, size_t offset) {
   int err;
 
-  if (offset >= inode_data->metadata.size)
+  if (offset >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
