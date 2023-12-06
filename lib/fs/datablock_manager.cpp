@@ -52,8 +52,10 @@ int DataBlock_Manager_Bitmap::new_datablock(u_int64_t *block_num) {
   char zero_buf[IO_BLOCK_SIZE] = {0};
 
   if (bitmap_block_num < block_segment_start ||
-      bitmap_block_num >= block_segment_end)
+      bitmap_block_num >= block_segment_end) {
+    perror("Error with new_datablock freelist head\n");
     return -1;
+  }
 
   if ((err = fs->disk->read_block(bitmap_block_num, bitmap.buf)) < 0)
     return err;
@@ -64,8 +66,10 @@ int DataBlock_Manager_Bitmap::new_datablock(u_int64_t *block_num) {
 
   u_int64_t relative_block_num = bitmap.claim_relative_block();
 
-  if (relative_block_num == 0)
+  if (relative_block_num == 0) {
+    errno = ENOSPC;
     return -1;
+  }
 
   u_int64_t block_num_ = relative_block_num + bitmap_block_num;
 

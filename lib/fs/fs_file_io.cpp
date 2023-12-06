@@ -282,7 +282,7 @@ ssize_t Fs::read(INode_Data *inode_data, char buf[], size_t count,
   op.fs = this;
 
   if ((err = sweep_inode_datablocks(inode_data, start_block_index, false,
-                                    &op)) != 0)
+                                    &op)) < 0)
     return err;
 
   return op.bytes_completed;
@@ -302,9 +302,14 @@ ssize_t Fs::write(INode_Data *inode_data, const char buf[], size_t count,
   op.bytes_completed = 0;
   op.fs = this;
 
-  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true,
-                                    &op)) != 0)
+  if ((err = sweep_inode_datablocks(inode_data, start_block_index, true, &op)) <
+      0)
     return err;
+
+  if (err > 1) {
+    errno = EFBIG;
+    return -1;
+  }
 
   inode_data->metadata.size =
       std::max(offset + op.bytes_completed, inode_data->metadata.size);
@@ -314,6 +319,16 @@ ssize_t Fs::write(INode_Data *inode_data, const char buf[], size_t count,
 
 int Fs::truncate(INode_Data *inode_data, size_t length) {
   int err;
+
+  if (length > FILE_SIZE_MAX) {
+    errno = EFBIG;
+    return -1;
+  }
+
+  if (length < 0) {
+    errno = EINVAL;
+    return -1;
+  }
 
   u_int64_t start_block_index = length / IO_BLOCK_SIZE;
   size_t internal_offset = length - (start_block_index * IO_BLOCK_SIZE);
@@ -334,8 +349,10 @@ int Fs::truncate(INode_Data *inode_data, size_t length) {
 ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
   int err;
 
-  if (offset >= inode_data->metadata.size)
+  if (offset >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);
@@ -350,8 +367,10 @@ ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
                                     &op)) < 0)
     return err;
 
-  if (op.bytes_completed >= inode_data->metadata.size)
+  if (op.bytes_completed >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   return op.bytes_completed;
 }
@@ -359,8 +378,10 @@ ssize_t Fs::lseek_next_data(INode_Data *inode_data, size_t offset) {
 ssize_t Fs::lseek_next_hole(INode_Data *inode_data, size_t offset) {
   int err;
 
-  if (offset >= inode_data->metadata.size)
+  if (offset >= inode_data->metadata.size) {
+    errno = ENXIO;
     return -1;
+  }
 
   u_int64_t start_block_index = offset / IO_BLOCK_SIZE;
   size_t internal_offset = offset - (start_block_index * IO_BLOCK_SIZE);

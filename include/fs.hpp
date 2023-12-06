@@ -7,7 +7,6 @@
 #include "fs_constants.hpp"
 #include "rawdisk.hpp"
 
-// TEMP:
 class DatablockOperation;
 
 class Fs {

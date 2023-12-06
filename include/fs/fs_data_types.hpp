@@ -39,6 +39,10 @@ public:
 
 #define NUMBER_OF_DIRECT_BLOCKS                                                \
   (((INODE_SIZE - NUMBER_OF_METADATA_BYTES) / sizeof(u_int64_t)) - 3)
+#define FILE_SIZE_MAX                                                          \
+  (IO_BLOCK_SIZE * (NUMBER_OF_DIRECT_BLOCKS + INDIRECT_BLOCKS +                \
+                    (INDIRECT_BLOCKS * INDIRECT_BLOCKS) +                      \
+                    (INDIRECT_BLOCKS * INDIRECT_BLOCKS * INDIRECT_BLOCKS)))
 
   u_int64_t single_indirect_block, double_indirect_block, triple_indirect_block;
   u_int64_t direct_blocks[NUMBER_OF_DIRECT_BLOCKS];

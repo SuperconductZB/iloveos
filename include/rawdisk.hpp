@@ -19,7 +19,7 @@ public:
   const char *dir;
   u_int64_t numSectors;
 
-  RealRawDisk(const char *directory);
+  RealRawDisk(const char *directory, u_int64_t _diskSize = 0);
   ~RealRawDisk();
 
   int read_block(u_int64_t block_number, char *buffer) override;

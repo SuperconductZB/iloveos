@@ -21,7 +21,7 @@ void RawDisk::print_block(u_int64_t block_number) {
   }
 }
 
-RealRawDisk::RealRawDisk(const char *directory)
+RealRawDisk::RealRawDisk(const char *directory, u_int64_t _diskSize)
     : fd(-1), dir(nullptr), numSectors(0) {
   dir = directory;
   diskSize = 0;
@@ -36,11 +36,15 @@ RealRawDisk::RealRawDisk(const char *directory)
     exit(1);
   }
 
-  // Use ioctl with BLKGETSIZE to get the number of sectors
-  if (ioctl(fd, BLKGETSIZE64, &diskSize) == -1) {
-    perror("Error getting disk size");
-    close(fd);
-    exit(1);
+  if (_diskSize == 0) {
+    // Use ioctl with BLKGETSIZE to get the number of sectors
+    if (ioctl(fd, BLKGETSIZE64, &diskSize) == -1) {
+      perror("Error getting disk size");
+      close(fd);
+      exit(1);
+    }
+  } else {
+    diskSize = _diskSize;
   }
 
   // Calculate the size in bytes
@@ -62,6 +66,7 @@ int RealRawDisk::read_block(u_int64_t block_number, char *buffer) {
 
   if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
     perror("Error seeking to offset");
+    errno = EIO;
     return -1;
   }
 
@@ -69,6 +74,7 @@ int RealRawDisk::read_block(u_int64_t block_number, char *buffer) {
   ssize_t bytesRead = read(fd, buffer, IO_BLOCK_SIZE);
   if (bytesRead < IO_BLOCK_SIZE) {
     perror("Error reading from device");
+    errno = EIO;
     return -1;
   }
 
@@ -80,6 +86,7 @@ int RealRawDisk::write_block(u_int64_t block_number, char *buffer) {
 
   if (lseek(fd, offset, SEEK_SET) == (u_int64_t)-1) {
     perror("Error seeking to offset");
+    errno = EIO;
     return -1;
   }
 
@@ -87,6 +94,7 @@ int RealRawDisk::write_block(u_int64_t block_number, char *buffer) {
   ssize_t bytesWritten = write(fd, buffer, IO_BLOCK_SIZE);
   if (bytesWritten < IO_BLOCK_SIZE) {
     perror("Error writing to device");
+    errno = EIO;
     return -1;
   }
 
@@ -112,6 +120,7 @@ int FakeRawDisk::read_block(u_int64_t block_number, char *buffer) {
 
   if (offset + IO_BLOCK_SIZE > diskSize) {
     perror("Error reading past fake disk size");
+    errno = EIO;
     return -1;
   }
 
@@ -125,6 +134,7 @@ int FakeRawDisk::write_block(u_int64_t block_number, char *buffer) {
 
   if (offset + IO_BLOCK_SIZE > diskSize) {
     perror("Error writing past fake disk size");
+    errno = EIO;
     return -1;
   }
 
