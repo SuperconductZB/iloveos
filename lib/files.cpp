@@ -223,6 +223,7 @@ bool FilesOperation::permission_check(int mask, INode_Data *inode) {
   mode_t per = (mode_t)inode->metadata.permissions;
   uid_t uid = (uid_t)inode->metadata.uid;
   gid_t gid = (gid_t)inode->metadata.gid;
+  if (getuid() == 0) return true;
   // printf("PERMISSION CHECK %d %llu %llu %o\n", mask, uid, gid, per);
   if (getuid() == uid) {
     if ((mask & R_OK) && !(per & S_IRUSR)) {
@@ -1162,6 +1163,7 @@ int FilesOperation::fischl_rename(const char *old_path, const char *new_path,
         break;
       }
     }
+    unlink_inode(rename_info.oldFileNode->inode_number);
     fischl_rm_entry(rename_info.oldParentNode->subdirectory, filename);
     fischl_rm_entry(rename_info.newParentNode->subdirectory,
                     rename_info.newName);
